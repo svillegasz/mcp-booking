@@ -292,6 +292,14 @@ export class GoogleMapsService {
         place.formatted_phone_number
       );
 
+      // Generate Google Maps URL
+      const googleMapsUrl = this.generateGoogleMapsUrl(
+        place.place_id,
+        place.name,
+        place.geometry.location.lat,
+        place.geometry.location.lng
+      );
+
       // 🎯 LOG BOOKING ANALYSIS RESULTS
       //   console.log('\n🎯 BOOKING ANALYSIS RESULTS:');
       //   console.log('='.repeat(50));
@@ -320,6 +328,7 @@ export class GoogleMapsService {
         ),
         phoneNumber: place.formatted_phone_number,
         website: place.website,
+        googleMapsUrl,
         bookingInfo,
         // 🆕 NEW: Google Places API reservation and service fields
         reservable: place.reservable || false,
@@ -508,6 +517,20 @@ export class GoogleMapsService {
     ];
 
     return bookingKeywords.some((keyword) => url.includes(keyword));
+  }
+
+  /**
+   * Generate Google Maps URL for a restaurant
+   */
+  private generateGoogleMapsUrl(
+    placeId: string,
+    name: string,
+    latitude: number,
+    longitude: number
+  ): string {
+    // Use place_id for the most accurate Google Maps URL
+    // This format directly opens the place in Google Maps
+    return `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${placeId}`;
   }
 
   /**

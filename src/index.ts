@@ -183,52 +183,52 @@ class RestaurantBookingServer {
               },
               required: ["placeId", "dateTime", "partySize"]
             }
+          },
+          {
+            name: "make_reservation",
+            description:
+              "Attempt to make a restaurant reservation (mock implementation)",
+            inputSchema: {
+              type: "object",
+              properties: {
+                placeId: {
+                  type: "string",
+                  description: "Google Places ID of the restaurant"
+                },
+                partySize: {
+                  type: "number",
+                  description: "Number of people in the party"
+                },
+                preferredDateTime: {
+                  type: "string",
+                  description: "Preferred date and time in ISO format"
+                },
+                contactName: {
+                  type: "string",
+                  description: "Name for the reservation"
+                },
+                contactPhone: {
+                  type: "string",
+                  description: "Phone number for the reservation"
+                },
+                contactEmail: {
+                  type: "string",
+                  description: "Email address (optional)"
+                },
+                specialRequests: {
+                  type: "string",
+                  description: "Any special requests or dietary restrictions"
+                }
+              },
+              required: [
+                "placeId",
+                "partySize",
+                "preferredDateTime",
+                "contactName",
+                "contactPhone"
+              ]
+            }
           }
-          // {
-          //   name: "make_reservation",
-          //   description:
-          //     "Attempt to make a restaurant reservation (mock implementation)",
-          //   inputSchema: {
-          //     type: "object",
-          //     properties: {
-          //       placeId: {
-          //         type: "string",
-          //         description: "Google Places ID of the restaurant"
-          //       },
-          //       partySize: {
-          //         type: "number",
-          //         description: "Number of people in the party"
-          //       },
-          //       preferredDateTime: {
-          //         type: "string",
-          //         description: "Preferred date and time in ISO format"
-          //       },
-          //       contactName: {
-          //         type: "string",
-          //         description: "Name for the reservation"
-          //       },
-          //       contactPhone: {
-          //         type: "string",
-          //         description: "Phone number for the reservation"
-          //       },
-          //       contactEmail: {
-          //         type: "string",
-          //         description: "Email address (optional)"
-          //       },
-          //       specialRequests: {
-          //         type: "string",
-          //         description: "Any special requests or dietary restrictions"
-          //       }
-          //     },
-          //     required: [
-          //       "placeId",
-          //       "partySize",
-          //       "preferredDateTime",
-          //       "contactName",
-          //       "contactPhone"
-          //     ]
-          //   }
-          // }
         ] as Tool[]
       };
     });
@@ -251,8 +251,8 @@ class RestaurantBookingServer {
           case "check_availability":
             return await this.handleCheckAvailability(args);
 
-          // case 'make_reservation':
-          //   return await this.handleMakeReservation(args);
+          case "make_reservation":
+            return await this.handleMakeReservation(args);
 
           default:
             throw new Error(`Unknown tool: ${name}`);

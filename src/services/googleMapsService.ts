@@ -44,7 +44,8 @@ export class GoogleMapsService {
         cuisineTypes,
         keyword,
         radius = 7000,
-        priceLevel
+        priceLevel,
+        locale = "en"
       } = params;
 
       // Determine the location to use for search
@@ -52,7 +53,7 @@ export class GoogleMapsService {
 
       if (placeName) {
         // Geocode the place name to get coordinates
-        searchLocation = await this.geocodePlaceName(placeName);
+        searchLocation = await this.geocodePlaceName(placeName, locale);
       } else if (location) {
         // Use provided coordinates
         searchLocation = location;
@@ -89,6 +90,7 @@ export class GoogleMapsService {
         radius,
         type: "restaurant",
         keyword: searchQuery,
+        language: locale,
         key: this.apiKey
       };
 
@@ -116,7 +118,10 @@ export class GoogleMapsService {
       for (const place of limitedResults) {
         try {
           if (place.place_id) {
-            const restaurant = await this.getRestaurantDetails(place.place_id);
+            const restaurant = await this.getRestaurantDetails(
+              place.place_id,
+              locale
+            );
             if (restaurant) {
               restaurants.push(restaurant);
             }
@@ -144,11 +149,15 @@ export class GoogleMapsService {
   /**
    * 🆕 NEW: Geocode a place name to get latitude and longitude coordinates
    */
-  async geocodePlaceName(placeName: string): Promise<Location> {
+  async geocodePlaceName(
+    placeName: string,
+    locale: string = "en"
+  ): Promise<Location> {
     try {
       const response = await this.client.geocode({
         params: {
           address: placeName,
+          language: locale as any,
           key: this.apiKey
         }
       });
@@ -182,11 +191,15 @@ export class GoogleMapsService {
   /**
    * Get detailed information about a specific restaurant
    */
-  async getRestaurantDetails(placeId: string): Promise<Restaurant | null> {
+  async getRestaurantDetails(
+    placeId: string,
+    locale: string = "en"
+  ): Promise<Restaurant | null> {
     try {
       const response = await this.client.placeDetails({
         params: {
           place_id: placeId,
+          language: locale as any,
           fields: [
             // Basic fields
             "place_id",

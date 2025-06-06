@@ -125,6 +125,12 @@ class RestaurantBookingServer {
                   enum: [1, 2, 3, 4],
                   description:
                     "Price level preference (1=inexpensive, 4=very expensive)"
+                },
+                locale: {
+                  type: "string",
+                  description:
+                    'Locale for search results and Google API responses (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean, "th" for Thai). Affects restaurant names, reviews, and other text content.',
+                  default: "en"
                 }
               },
               required: ["mood", "event"]
@@ -140,6 +146,12 @@ class RestaurantBookingServer {
                 placeId: {
                   type: "string",
                   description: "Google Places ID of the restaurant"
+                },
+                locale: {
+                  type: "string",
+                  description:
+                    'Locale for restaurant details (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean). Affects restaurant names, reviews, and other text content.',
+                  default: "en"
                 }
               },
               required: ["placeId"]
@@ -155,6 +167,12 @@ class RestaurantBookingServer {
                 placeId: {
                   type: "string",
                   description: "Google Places ID of the restaurant"
+                },
+                locale: {
+                  type: "string",
+                  description:
+                    'Locale for booking instructions (e.g., "en", "zh-TW", "ja", "ko")',
+                  default: "en"
                 }
               },
               required: ["placeId"]
@@ -179,6 +197,12 @@ class RestaurantBookingServer {
                 partySize: {
                   type: "number",
                   description: "Number of people in the party"
+                },
+                locale: {
+                  type: "string",
+                  description:
+                    'Locale for availability check (e.g., "en", "zh-TW", "ja", "ko")',
+                  default: "en"
                 }
               },
               required: ["placeId", "dateTime", "partySize"]
@@ -218,6 +242,12 @@ class RestaurantBookingServer {
                 specialRequests: {
                   type: "string",
                   description: "Any special requests or dietary restrictions"
+                },
+                locale: {
+                  type: "string",
+                  description:
+                    'Locale for reservation process (e.g., "en", "zh-TW", "ja", "ko")',
+                  default: "en"
                 }
               },
               required: [
@@ -290,7 +320,8 @@ class RestaurantBookingServer {
       mood: args.mood,
       event: args.event,
       radius: args.radius || 20000,
-      priceLevel: args.priceLevel
+      priceLevel: args.priceLevel,
+      locale: args.locale || "en"
     };
 
     // Search for restaurants
@@ -351,7 +382,8 @@ class RestaurantBookingServer {
 
   private async handleGetRestaurantDetails(args: any) {
     const restaurant = await this.googleMapsService.getRestaurantDetails(
-      args.placeId
+      args.placeId,
+      args.locale || "en"
     );
 
     if (!restaurant) {
@@ -377,7 +409,8 @@ class RestaurantBookingServer {
 
   private async handleGetBookingInstructions(args: any) {
     const restaurant = await this.googleMapsService.getRestaurantDetails(
-      args.placeId
+      args.placeId,
+      args.locale || "en"
     );
 
     if (!restaurant) {
@@ -407,7 +440,8 @@ class RestaurantBookingServer {
 
   private async handleCheckAvailability(args: any) {
     const restaurant = await this.googleMapsService.getRestaurantDetails(
-      args.placeId
+      args.placeId,
+      args.locale || "en"
     );
 
     if (!restaurant) {
@@ -439,7 +473,8 @@ class RestaurantBookingServer {
 
   private async handleMakeReservation(args: any) {
     const restaurant = await this.googleMapsService.getRestaurantDetails(
-      args.placeId
+      args.placeId,
+      args.locale || "en"
     );
 
     if (!restaurant) {

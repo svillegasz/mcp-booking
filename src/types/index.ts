@@ -17,6 +17,7 @@ export interface RestaurantSearchParams {
   radius?: number; // in meters, default 20km
   priceLevel?: 1 | 2 | 3 | 4; // 1 = inexpensive, 4 = very expensive
   keyword?: string; // 🆕 NEW: Search for specific food types like "hotpot", "sushi", "pizza", etc.
+  locale?: string; // 🆕 NEW: Locale for search results (e.g., "en", "zh-TW", "ja", "ko")
 }
 
 export interface Restaurant {

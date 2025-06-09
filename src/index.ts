@@ -23,8 +23,15 @@ import {
 dotenv.config();
 
 // Default coordinates for Taiwan
-const DEFAULT_LATITUDE = 24.1501164;
-const DEFAULT_LONGITUDE = 120.6692299;
+const DEFAULT_LATITUDE = parseFloat(
+  process.env.DEFAULT_LATITUDE || "24.1501164"
+);
+const DEFAULT_LONGITUDE = parseFloat(
+  process.env.DEFAULT_LONGITUDE || "120.6692299"
+);
+const DEFAULT_SEARCH_RADIUS = parseInt(
+  process.env.DEFAULT_SEARCH_RADIUS || "3000"
+); // 3km in meters
 
 class RestaurantBookingServer {
   private server: Server;
@@ -65,22 +72,21 @@ class RestaurantBookingServer {
         tools: [
           {
             name: "search_restaurants",
-            description:
-              "Search for restaurants based on location, cuisine types, mood, and event type. Returns top 3 AI-recommended restaurants within 20km radius. You can also search for specific food types using keywords.",
+            description: `Search for restaurants based on location, cuisine types, mood, and event type. Returns top 3 AI-recommended restaurants within ${
+              DEFAULT_SEARCH_RADIUS / 1000
+            }km radius. You can also search for specific food types using keywords.`,
             inputSchema: {
               type: "object",
               properties: {
                 latitude: {
                   type: "number",
-                  description:
-                    "Latitude of the search location (default: 24.1501164 - Taiwan)",
-                  default: 24.1501164
+                  description: `Latitude of the search location (default: ${DEFAULT_LATITUDE} - Taiwan)`,
+                  default: DEFAULT_LATITUDE
                 },
                 longitude: {
                   type: "number",
-                  description:
-                    "Longitude of the search location (default: 120.6692299 - Taiwan)",
-                  default: 120.6692299
+                  description: `Longitude of the search location (default: ${DEFAULT_LONGITUDE} - Taiwan)`,
+                  default: DEFAULT_LONGITUDE
                 },
                 placeName: {
                   type: "string",
@@ -116,9 +122,10 @@ class RestaurantBookingServer {
                 },
                 radius: {
                   type: "number",
-                  description:
-                    "Search radius in meters (default: 20000 = 20km)",
-                  default: 20000
+                  description: `Search radius in meters (default: ${DEFAULT_SEARCH_RADIUS} = ${
+                    DEFAULT_SEARCH_RADIUS / 1000
+                  }km)`,
+                  default: DEFAULT_SEARCH_RADIUS
                 },
                 priceLevel: {
                   type: "number",
@@ -319,7 +326,7 @@ class RestaurantBookingServer {
       keyword: args.keyword,
       mood: args.mood,
       event: args.event,
-      radius: args.radius || 20000,
+      radius: args.radius || DEFAULT_SEARCH_RADIUS,
       priceLevel: args.priceLevel,
       locale: args.locale || "en"
     };

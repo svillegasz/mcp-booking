@@ -33,6 +33,7 @@ export interface Restaurant {
   phoneNumber?: string;
   website?: string;
   googleMapsUrl?: string;
+  distance?: number; // 🆕 NEW: Distance from search location in meters
   bookingInfo?: {
     reservable?: boolean;
     bookingUrl?: string;

@@ -32,7 +32,48 @@ export class GoogleMapsService {
   }
 
   /**
+   * Calculate the distance between two points using the Haversine formula
+   * @param lat1 Latitude of first point
+   * @param lon1 Longitude of first point
+   * @param lat2 Latitude of second point
+   * @param lon2 Longitude of second point
+   * @returns Distance in meters
+   */
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = this.toRadians(lat2 - lat1);
+    const dLon = this.toRadians(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(lat1)) *
+        Math.cos(this.toRadians(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in meters
+  }
+
+  /**
+   * Convert degrees to radians
+   */
+  private toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
    * Search for restaurants based on location, cuisine types, and other criteria
+   *
+   * This method ensures strict radius filtering by:
+   * 1. Using Google Places API with the specified radius as a hint
+   * 2. Calculating the actual distance using Haversine formula for each result
+   * 3. Filtering out restaurants that exceed the specified radius
+   * 4. Sorting results by distance (closest first)
+   * 5. Adding distance information to each restaurant object
    */
   async searchRestaurants(
     params: RestaurantSearchParams
@@ -43,7 +84,7 @@ export class GoogleMapsService {
         placeName,
         cuisineTypes,
         keyword,
-        radius = 7000,
+        radius = 2000,
         priceLevel,
         locale = "en"
       } = params;
@@ -79,11 +120,6 @@ export class GoogleMapsService {
         searchQuery = "restaurant";
       }
 
-      //   console.log(`🔍 Search Query: "${searchQuery}"`);
-      //   if (priceLevel) {
-      //     console.log(`💰 Price Level Filter: ${priceLevel} (${this.getPriceLevelDescription(priceLevel)})`);
-      //   }
-
       // Build API request parameters
       const apiParams: any = {
         location: `${searchLocation.latitude},${searchLocation.longitude}`,
@@ -111,6 +147,7 @@ export class GoogleMapsService {
       // Get detailed information for each restaurant
       const restaurants: Restaurant[] = [];
       const results = response.data.results || [];
+      let filteredOutCount = 0;
 
       // Limit to top 20 results to avoid API quota issues
       const limitedResults = results.slice(0, 20);
@@ -123,21 +160,42 @@ export class GoogleMapsService {
               locale
             );
             if (restaurant) {
-              restaurants.push(restaurant);
+              // Calculate distance from search location to restaurant
+              const distance = this.calculateDistance(
+                searchLocation.latitude,
+                searchLocation.longitude,
+                restaurant.location.latitude,
+                restaurant.location.longitude
+              );
+
+              // Only include restaurants within the specified radius
+              if (distance <= radius) {
+                // Add distance information to the restaurant object
+                restaurant.distance = Math.round(distance);
+                restaurants.push(restaurant);
+              } else {
+                filteredOutCount++;
+              }
             }
           }
         } catch (error) {
-          console.warn(
-            `Failed to get details for place ${place.place_id}:`,
+          console.error(
+            `Error getting details for place ${place.place_id}:`,
             error
           );
-          // Continue with other restaurants
         }
       }
 
+      // Sort restaurants by distance (closest first)
+      restaurants.sort((a, b) => {
+        const distanceA = a.distance || 0;
+        const distanceB = b.distance || 0;
+        return distanceA - distanceB;
+      });
+
       return restaurants;
     } catch (error) {
-      console.error("Error searching restaurants:", error);
+      // console.error('Error searching restaurants:', error);
       throw new Error(
         `Failed to search restaurants: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -157,7 +215,7 @@ export class GoogleMapsService {
       const response = await this.client.geocode({
         params: {
           address: placeName,
-          language: locale as any,
+          language: locale,
           key: this.apiKey
         }
       });
@@ -243,51 +301,6 @@ export class GoogleMapsService {
 
       const place = response.data.result as any;
 
-      // 🔍 LOG RAW GOOGLE PLACES API RESPONSE
-      //   console.log('\n🔍 RAW GOOGLE PLACES API RESPONSE:');
-      //   console.log('='.repeat(80));
-      //   console.log('📍 Place ID:', place.place_id);
-      //   console.log('🏪 Name:', place.name);
-      //   console.log('📍 Address:', place.formatted_address);
-      //   console.log('📞 Phone:', place.formatted_phone_number || 'Not provided');
-      //   console.log('🌐 Website:', place.website || 'Not provided');
-      //   console.log('⭐ Rating:', place.rating || 'Not provided');
-      //   console.log('👥 User Ratings Total:', place.user_ratings_total || 'Not provided');
-      //   console.log('💰 Price Level:', place.price_level || 'Not provided');
-      //   console.log('🏷️ Types:', place.types?.join(', ') || 'Not provided');
-
-      //   if (place.opening_hours) {
-      //     console.log('\n🕒 OPENING HOURS DATA:');
-      //     console.log('   • Open Now:', place.opening_hours.open_now);
-      //     if (place.opening_hours.weekday_text) {
-      //       console.log('   • Weekday Text:');
-      //       place.opening_hours.weekday_text.forEach((day: string) => {
-      //         console.log('     -', day);
-      //       });
-      //     }
-      //     if (place.opening_hours.periods) {
-      //       console.log('   • Periods (Raw):');
-      //       console.log(JSON.stringify(place.opening_hours.periods, null, 4));
-      //     }
-      //   }
-
-      //   if (place.photos && place.photos.length > 0) {
-      //     console.log('\n📸 PHOTOS DATA:');
-      //     console.log('   • Photo Count:', place.photos.length);
-      //     console.log('   • First Photo Reference:', place.photos[0].photo_reference);
-      //   }
-
-      //   if (place.reviews && place.reviews.length > 0) {
-      //     console.log('\n📝 REVIEWS DATA:');
-      //     console.log('   • Review Count:', place.reviews.length);
-      //     console.log('   • First Review Author:', place.reviews[0].author_name);
-      //     console.log('   • First Review Rating:', place.reviews[0].rating);
-      //   }
-
-      //   console.log('\n📊 COMPLETE RAW GOOGLE API RESPONSE:');
-      //   console.log(JSON.stringify(place, null, 2));
-      //   console.log('='.repeat(80));
-
       // Validate required fields
       if (
         !place.place_id ||
@@ -312,16 +325,6 @@ export class GoogleMapsService {
         place.geometry.location.lat,
         place.geometry.location.lng
       );
-
-      // 🎯 LOG BOOKING ANALYSIS RESULTS
-      //   console.log('\n🎯 BOOKING ANALYSIS RESULTS:');
-      //   console.log('='.repeat(50));
-      //   console.log('Input Data:');
-      //   console.log('   • Website URL:', place.website || 'None');
-      //   console.log('   • Phone Number:', place.formatted_phone_number || 'None');
-      //   console.log('\nBooking Analysis Results:');
-      //   console.log(JSON.stringify(bookingInfo, null, 2));
-      //   console.log('='.repeat(50));
 
       return {
         placeId: place.place_id,
@@ -616,14 +619,16 @@ export class GoogleMapsService {
   async searchByCuisine(
     location: Location,
     cuisineType: string,
-    radius: number = 20000
+    radius: number = 7000,
+    locale: string = "en"
   ): Promise<Restaurant[]> {
     const searchParams: RestaurantSearchParams = {
       location,
       cuisineTypes: [cuisineType],
       mood: "",
       event: "casual dining",
-      radius
+      radius,
+      locale
     };
 
     return this.searchRestaurants(searchParams);

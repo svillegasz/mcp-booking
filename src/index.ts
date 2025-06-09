@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import express from 'express';
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool
+  isInitializeRequest
 } from "@modelcontextprotocol/sdk/types.js";
 import dotenv from "dotenv";
 
@@ -32,26 +33,14 @@ const DEFAULT_LONGITUDE = parseFloat(
 const DEFAULT_SEARCH_RADIUS = parseInt(
   process.env.DEFAULT_SEARCH_RADIUS || "3000"
 ); // 3km in meters
+const PORT = parseInt(process.env.PORT || "3000");
 
 class RestaurantBookingServer {
-  private server: Server;
   private googleMapsService: GoogleMapsService;
   private recommendationService: RestaurantRecommendationService;
   private bookingService: BookingService;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "restaurant-booking-server",
-        version: "1.0.0"
-      },
-      {
-        capabilities: {
-          tools: {}
-        }
-      }
-    );
-
     // Initialize services
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
@@ -61,254 +50,116 @@ class RestaurantBookingServer {
     this.googleMapsService = new GoogleMapsService(apiKey);
     this.recommendationService = new RestaurantRecommendationService();
     this.bookingService = new BookingService();
-
-    this.setupToolHandlers();
   }
 
-  private setupToolHandlers() {
-    // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: [
-          {
-            name: "search_restaurants",
-            description: `Search for restaurants based on location, cuisine types, mood, and event type. Returns top 3 AI-recommended restaurants within ${
-              DEFAULT_SEARCH_RADIUS / 1000
-            }km radius. You can also search for specific food types using keywords.`,
-            inputSchema: {
-              type: "object",
-              properties: {
-                latitude: {
-                  type: "number",
-                  description: `Latitude of the search location (default: ${DEFAULT_LATITUDE} - Taiwan)`,
-                  default: DEFAULT_LATITUDE
-                },
-                longitude: {
-                  type: "number",
-                  description: `Longitude of the search location (default: ${DEFAULT_LONGITUDE} - Taiwan)`,
-                  default: DEFAULT_LONGITUDE
-                },
-                placeName: {
-                  type: "string",
-                  description:
-                    'Place name to search near (e.g., "New York", "Tokyo", "London"). Alternative to providing latitude/longitude coordinates.'
-                },
-                cuisineTypes: {
-                  type: "array",
-                  items: { type: "string" },
-                  description:
-                    'Array of preferred cuisine types (e.g., ["Italian", "Japanese", "Mexican"])'
-                },
-                keyword: {
-                  type: "string",
-                  description:
-                    'Search for specific food types or dishes (e.g., "hotpot", "sushi", "pizza", "ramen", "dim sum", "barbecue")'
-                },
-                mood: {
-                  type: "string",
-                  description:
-                    'Desired mood/atmosphere (e.g., "romantic", "casual", "upscale", "fun", "quiet")'
-                },
-                event: {
-                  type: "string",
-                  enum: [
-                    "dating",
-                    "family gathering",
-                    "business meeting",
-                    "casual dining",
-                    "celebration"
-                  ],
-                  description: "Type of event or occasion"
-                },
-                radius: {
-                  type: "number",
-                  description: `Search radius in meters (default: ${DEFAULT_SEARCH_RADIUS} = ${
-                    DEFAULT_SEARCH_RADIUS / 1000
-                  }km)`,
-                  default: DEFAULT_SEARCH_RADIUS
-                },
-                priceLevel: {
-                  type: "number",
-                  enum: [1, 2, 3, 4],
-                  description:
-                    "Price level preference (1=inexpensive, 4=very expensive)"
-                },
-                locale: {
-                  type: "string",
-                  description:
-                    'Locale for search results and Google API responses (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean, "th" for Thai). Affects restaurant names, reviews, and other text content.',
-                  default: "en"
-                }
-              },
-              required: ["mood", "event"]
-            }
-          },
-          {
-            name: "get_restaurant_details",
-            description:
-              "Get detailed information about a specific restaurant including reviews, photos, and opening hours",
-            inputSchema: {
-              type: "object",
-              properties: {
-                placeId: {
-                  type: "string",
-                  description: "Google Places ID of the restaurant"
-                },
-                locale: {
-                  type: "string",
-                  description:
-                    'Locale for restaurant details (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean). Affects restaurant names, reviews, and other text content.',
-                  default: "en"
-                }
-              },
-              required: ["placeId"]
-            }
-          },
-          {
-            name: "get_booking_instructions",
-            description:
-              "Get instructions on how to make a reservation at a specific restaurant",
-            inputSchema: {
-              type: "object",
-              properties: {
-                placeId: {
-                  type: "string",
-                  description: "Google Places ID of the restaurant"
-                },
-                locale: {
-                  type: "string",
-                  description:
-                    'Locale for booking instructions (e.g., "en", "zh-TW", "ja", "ko")',
-                  default: "en"
-                }
-              },
-              required: ["placeId"]
-            }
-          },
-          {
-            name: "check_availability",
-            description:
-              "Check availability for a restaurant reservation (mock implementation)",
-            inputSchema: {
-              type: "object",
-              properties: {
-                placeId: {
-                  type: "string",
-                  description: "Google Places ID of the restaurant"
-                },
-                dateTime: {
-                  type: "string",
-                  description:
-                    'Preferred date and time in ISO format (e.g., "2024-01-15T19:00:00")'
-                },
-                partySize: {
-                  type: "number",
-                  description: "Number of people in the party"
-                },
-                locale: {
-                  type: "string",
-                  description:
-                    'Locale for availability check (e.g., "en", "zh-TW", "ja", "ko")',
-                  default: "en"
-                }
-              },
-              required: ["placeId", "dateTime", "partySize"]
-            }
-          },
-          {
-            name: "make_reservation",
-            description:
-              "Attempt to make a restaurant reservation (mock implementation)",
-            inputSchema: {
-              type: "object",
-              properties: {
-                placeId: {
-                  type: "string",
-                  description: "Google Places ID of the restaurant"
-                },
-                partySize: {
-                  type: "number",
-                  description: "Number of people in the party"
-                },
-                preferredDateTime: {
-                  type: "string",
-                  description: "Preferred date and time in ISO format"
-                },
-                contactName: {
-                  type: "string",
-                  description: "Name for the reservation"
-                },
-                contactPhone: {
-                  type: "string",
-                  description: "Phone number for the reservation"
-                },
-                contactEmail: {
-                  type: "string",
-                  description: "Email address (optional)"
-                },
-                specialRequests: {
-                  type: "string",
-                  description: "Any special requests or dietary restrictions"
-                },
-                locale: {
-                  type: "string",
-                  description:
-                    'Locale for reservation process (e.g., "en", "zh-TW", "ja", "ko")',
-                  default: "en"
-                }
-              },
-              required: [
-                "placeId",
-                "partySize",
-                "preferredDateTime",
-                "contactName",
-                "contactPhone"
-              ]
-            }
-          }
-        ] as Tool[]
-      };
-    });
-
-    // Handle tool calls
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-
-      try {
-        switch (name) {
-          case "search_restaurants":
-            return await this.handleSearchRestaurants(args);
-
-          case "get_restaurant_details":
-            return await this.handleGetRestaurantDetails(args);
-
-          case "get_booking_instructions":
-            return await this.handleGetBookingInstructions(args);
-
-          case "check_availability":
-            return await this.handleCheckAvailability(args);
-
-          case "make_reservation":
-            return await this.handleMakeReservation(args);
-
-          default:
-            throw new Error(`Unknown tool: ${name}`);
-        }
-      } catch (error) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${
-                error instanceof Error
-                  ? error.message
-                  : "Unknown error occurred"
-              }`
-            }
-          ]
-        };
+  private createServer(): McpServer {
+    const server = new McpServer(
+      {
+        name: "restaurant-booking-server",
+        version: "1.0.0"
       }
-    });
+    );
+
+    this.setupTools(server);
+    return server;
+  }
+
+  private setupTools(server: McpServer) {
+    // Search restaurants tool
+    server.tool(
+      "search_restaurants",
+      {
+        latitude: z.number().optional().describe(`Latitude of the search location (default: ${DEFAULT_LATITUDE} - Taiwan)`),
+        longitude: z.number().optional().describe(`Longitude of the search location (default: ${DEFAULT_LONGITUDE} - Taiwan)`),
+        placeName: z.string().optional().describe('Place name to search near (e.g., "New York", "Tokyo", "London"). Alternative to providing latitude/longitude coordinates.'),
+        cuisineTypes: z.array(z.string()).optional().describe('Array of preferred cuisine types (e.g., ["Italian", "Japanese", "Mexican"])'),
+        keyword: z.string().optional().describe('Search for specific food types or dishes (e.g., "hotpot", "sushi", "pizza", "ramen", "dim sum", "barbecue")'),
+        mood: z.string().describe('Desired mood/atmosphere (e.g., "romantic", "casual", "upscale", "fun", "quiet")'),
+        event: z.enum(["dating", "family gathering", "business meeting", "casual dining", "celebration"]).describe("Type of event or occasion"),
+        radius: z.number().optional().describe(`Search radius in meters (default: ${DEFAULT_SEARCH_RADIUS} = ${DEFAULT_SEARCH_RADIUS / 1000}km)`),
+        priceLevel: z.number().min(1).max(4).optional().describe("Price level preference (1=inexpensive, 4=very expensive)"),
+        locale: z.string().optional().describe('Locale for search results and Google API responses (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean, "th" for Thai). Affects restaurant names, reviews, and other text content.')
+      },
+      async (args: {
+        latitude?: number;
+        longitude?: number;
+        placeName?: string;
+        cuisineTypes?: string[];
+        keyword?: string;
+        mood: string;
+        event: "dating" | "family gathering" | "business meeting" | "casual dining" | "celebration";
+        radius?: number;
+        priceLevel?: number;
+        locale?: string;
+      }) => {
+        return await this.handleSearchRestaurants(args);
+      }
+    );
+
+    // Get restaurant details tool
+    server.tool(
+      "get_restaurant_details",
+      {
+        placeId: z.string().describe("Google Places ID of the restaurant"),
+        locale: z.string().optional().describe('Locale for restaurant details (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean). Affects restaurant names, reviews, and other text content.')
+      },
+      async (args: { placeId: string; locale?: string }) => {
+        return await this.handleGetRestaurantDetails(args);
+      }
+    );
+
+    // Get booking instructions tool
+    server.tool(
+      "get_booking_instructions",
+      {
+        placeId: z.string().describe("Google Places ID of the restaurant"),
+        locale: z.string().optional().describe('Locale for booking instructions (e.g., "en", "zh-TW", "ja", "ko")')
+      },
+      async (args: { placeId: string; locale?: string }) => {
+        return await this.handleGetBookingInstructions(args);
+      }
+    );
+
+    // Check availability tool
+    server.tool(
+      "check_availability",
+      {
+        placeId: z.string().describe("Google Places ID of the restaurant"),
+        dateTime: z.string().describe('Preferred date and time in ISO format (e.g., "2024-01-15T19:00:00")'),
+        partySize: z.number().describe("Number of people in the party"),
+        locale: z.string().optional().describe('Locale for availability check (e.g., "en", "zh-TW", "ja", "ko")')
+      },
+      async (args: { placeId: string; dateTime: string; partySize: number; locale?: string }) => {
+        return await this.handleCheckAvailability(args);
+      }
+    );
+
+    // Make reservation tool
+    server.tool(
+      "make_reservation",
+      {
+        placeId: z.string().describe("Google Places ID of the restaurant"),
+        partySize: z.number().describe("Number of people in the party"),
+        preferredDateTime: z.string().describe("Preferred date and time in ISO format"),
+        contactName: z.string().describe("Name for the reservation"),
+        contactPhone: z.string().describe("Phone number for the reservation"),
+        contactEmail: z.string().optional().describe("Email address (optional)"),
+        specialRequests: z.string().optional().describe("Any special requests or dietary restrictions"),
+        locale: z.string().optional().describe('Locale for reservation process (e.g., "en", "zh-TW", "ja", "ko")')
+      },
+      async (args: {
+        placeId: string;
+        partySize: number;
+        preferredDateTime: string;
+        contactName: string;
+        contactPhone: string;
+        contactEmail?: string;
+        specialRequests?: string;
+        locale?: string;
+      }) => {
+        return await this.handleMakeReservation(args);
+      }
+    );
   }
 
   private async handleSearchRestaurants(args: any) {
@@ -340,7 +191,7 @@ class RestaurantBookingServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: "No restaurants found matching your criteria. Try expanding your search radius or adjusting your preferences."
           }
         ]
@@ -380,7 +231,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: JSON.stringify(result, null, 2)
         }
       ]
@@ -397,7 +248,7 @@ class RestaurantBookingServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: "Restaurant not found or unable to retrieve details."
           }
         ]
@@ -407,7 +258,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: JSON.stringify(restaurant, null, 2)
         }
       ]
@@ -424,7 +275,7 @@ class RestaurantBookingServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: "Restaurant not found."
           }
         ]
@@ -438,7 +289,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: instructions
         }
       ]
@@ -455,7 +306,7 @@ class RestaurantBookingServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: "Restaurant not found."
           }
         ]
@@ -471,7 +322,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: JSON.stringify(availability, null, 2)
         }
       ]
@@ -488,7 +339,7 @@ class RestaurantBookingServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: "Restaurant not found."
           }
         ]
@@ -512,7 +363,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: JSON.stringify(result, null, 2)
         }
       ]
@@ -520,9 +371,104 @@ class RestaurantBookingServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error("Restaurant Booking MCP Server running on stdio");
+    const app = express();
+    app.use(express.json());
+
+    // Map to store transports by session ID for stateful connections
+    const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+
+    // Health check endpoint
+    app.get('/health', (req, res) => {
+      res.json({ status: 'ok', service: 'restaurant-booking-mcp-server' });
+    });
+
+    // Handle POST requests for client-to-server communication
+    app.post('/mcp', async (req, res) => {
+      try {
+        // Check for existing session ID
+        const sessionId = req.headers['mcp-session-id'] as string | undefined;
+        let transport: StreamableHTTPServerTransport;
+        let server: McpServer;
+
+        if (sessionId && transports[sessionId]) {
+          // Reuse existing transport
+          transport = transports[sessionId];
+        } else if (!sessionId && isInitializeRequest(req.body)) {
+          // New initialization request
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            onsessioninitialized: (sessionId) => {
+              // Store the transport by session ID
+              transports[sessionId] = transport;
+            }
+          });
+
+          // Clean up transport when closed
+          transport.onclose = () => {
+            if (transport.sessionId) {
+              delete transports[transport.sessionId];
+            }
+          };
+
+          // Create new server instance
+          server = this.createServer();
+
+          // Connect to the MCP server
+          await server.connect(transport);
+        } else {
+          // Invalid request
+          res.status(400).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32000,
+              message: 'Bad Request: No valid session ID provided',
+            },
+            id: null,
+          });
+          return;
+        }
+
+        // Handle the request
+        await transport.handleRequest(req, res, req.body);
+      } catch (error) {
+        console.error('Error handling MCP request:', error);
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32603,
+              message: 'Internal server error',
+            },
+            id: null,
+          });
+        }
+      }
+    });
+
+    // Reusable handler for GET and DELETE requests
+    const handleSessionRequest = async (req: express.Request, res: express.Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      if (!sessionId || !transports[sessionId]) {
+        res.status(400).send('Invalid or missing session ID');
+        return;
+      }
+      
+      const transport = transports[sessionId];
+      await transport.handleRequest(req, res);
+    };
+
+    // Handle GET requests for server-to-client notifications via SSE
+    app.get('/mcp', handleSessionRequest);
+
+    // Handle DELETE requests for session termination
+    app.delete('/mcp', handleSessionRequest);
+
+    // Start the server
+    app.listen(PORT, () => {
+      console.log(`Restaurant Booking MCP Server running on http://localhost:${PORT}`);
+      console.log(`Health check available at http://localhost:${PORT}/health`);
+      console.log(`MCP endpoint available at http://localhost:${PORT}/mcp`);
+    });
   }
 }
 
@@ -531,4 +477,10 @@ const server = new RestaurantBookingServer();
 server.run().catch((error) => {
   console.error("Failed to start server:", error);
   process.exit(1);
+});
+
+// Handle server shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down server...');
+  process.exit(0);
 });

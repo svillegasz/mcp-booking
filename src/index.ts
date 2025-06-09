@@ -464,10 +464,10 @@ class RestaurantBookingServer {
     app.delete('/mcp', handleSessionRequest);
 
     // Start the server
-    app.listen(PORT, () => {
-      console.log(`Restaurant Booking MCP Server running on http://localhost:${PORT}`);
-      console.log(`Health check available at http://localhost:${PORT}/health`);
-      console.log(`MCP endpoint available at http://localhost:${PORT}/mcp`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Restaurant Booking MCP Server running on http://0.0.0.0:${PORT}`);
+      console.log(`Health check available at http://0.0.0.0:${PORT}/health`);
+      console.log(`MCP endpoint available at http://0.0.0.0:${PORT}/mcp`);
     });
   }
 }

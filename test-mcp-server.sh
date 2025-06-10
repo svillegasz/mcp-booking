@@ -238,8 +238,8 @@ reservation_data="{
             \"partySize\": 2,
             \"preferredDateTime\": \"2024-12-25T19:00:00\",
             \"contactName\": \"Sam Wang\",
-            \"contactPhone\": \"+886953201505\",
-            \"contactEmail\": \"sam.wang.0723@gmail.com\",
+            \"contactPhone\": \"+1234567890\",
+            \"contactEmail\": \"samxxxx@gmail.com\",
             \"specialRequests\": \"Window seat preferred\",
             \"locale\": \"en\"
         }

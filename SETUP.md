@@ -3,31 +3,38 @@
 ## 🚀 Get Started in 5 Minutes
 
 ### 1. Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### 2. Get Google Maps API Key
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing one
 3. Enable these APIs:
    - Places API
    - Places API (New)
    - Geocoding API
+   - Geolocation API
+   - Maps Javascript API
 4. Create an API Key
 5. Restrict the key to the enabled APIs
 
 ### 3. Configure Environment
+
 ```bash
 cp .env.example .env
 ```
 
 Edit `.env` and add your API key:
+
 ```
 GOOGLE_MAPS_API_KEY=your_actual_api_key_here
 ```
 
 ### 4. Build and Run
+
 ```bash
 npm run build
 npm start
@@ -36,6 +43,7 @@ npm start
 ## 🧪 Test the Server
 
 Run the test script:
+
 ```bash
 node test-server.js
 ```
@@ -51,6 +59,7 @@ node test-server.js
 ## 📖 Usage Examples
 
 ### Find Restaurants in Taiwan (Default Location)
+
 ```json
 {
   "cuisineTypes": ["Chinese", "Taiwanese"],
@@ -61,9 +70,10 @@ node test-server.js
 ```
 
 ### Find Romantic Restaurants in Taipei
+
 ```json
 {
-  "latitude": 25.0330,
+  "latitude": 25.033,
   "longitude": 121.5654,
   "cuisineTypes": ["Italian", "French"],
   "mood": "romantic",
@@ -73,10 +83,11 @@ node test-server.js
 ```
 
 ### Family-Friendly Options (Custom Location)
+
 ```json
 {
   "latitude": 40.7128,
-  "longitude": -74.0060,
+  "longitude": -74.006,
   "cuisineTypes": ["American", "Italian"],
   "mood": "casual",
   "event": "family gathering",
@@ -109,16 +120,19 @@ node test-server.js
 ## 🚨 Troubleshooting
 
 **"API Key Required" Error:**
+
 - Make sure `.env` file exists with valid `GOOGLE_MAPS_API_KEY`
 - Verify API key has Places API enabled
 - Check API key restrictions
 
 **No Results Found:**
+
 - Increase search radius
 - Try broader cuisine types
 - Check if location coordinates are valid
 
 **Build Errors:**
+
 - Run `npm install` to ensure all dependencies are installed
 - Check Node.js version (requires 18+)
 
@@ -127,4 +141,4 @@ node test-server.js
 1. See `examples/usage-examples.md` for detailed examples
 2. Read `README.md` for complete documentation
 3. Customize recommendation logic in `src/services/`
-4. Add real booking integration for production use 
+4. Add real booking integration for production use

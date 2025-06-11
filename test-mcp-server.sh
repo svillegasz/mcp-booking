@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Server configuration
-SERVER_URL="http://localhost:3000"
+SERVER_URL="http://localhost:3001"
 MCP_ENDPOINT="$SERVER_URL/mcp"
 HEALTH_ENDPOINT="$SERVER_URL/health"
 

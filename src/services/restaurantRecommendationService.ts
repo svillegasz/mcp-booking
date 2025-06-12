@@ -1,25 +1,33 @@
-import { 
-  Restaurant, 
-  RestaurantSearchParams, 
-  RestaurantRecommendation 
-} from '../types/index.js';
+import {
+  Restaurant,
+  RestaurantSearchParams,
+  RestaurantRecommendation,
+} from "../types/index.js";
 
 export class RestaurantRecommendationService {
-  
   /**
    * Analyze and score restaurants based on search criteria
    */
   async getRecommendations(
-    restaurants: Restaurant[], 
+    restaurants: Restaurant[],
     params: RestaurantSearchParams
   ): Promise<RestaurantRecommendation[]> {
     const recommendations: RestaurantRecommendation[] = [];
 
     for (const restaurant of restaurants) {
       const score = this.calculateRestaurantScore(restaurant, params);
-      const suitabilityForEvent = this.calculateEventSuitability(restaurant, params.event);
+      const suitabilityForEvent = this.calculateEventSuitability(
+        restaurant,
+        params.event
+      );
       const moodMatch = this.calculateMoodMatch(restaurant, params.mood);
-      const reasoning = this.generateReasoning(restaurant, params, score, suitabilityForEvent, moodMatch);
+      const reasoning = this.generateReasoning(
+        restaurant,
+        params,
+        score,
+        suitabilityForEvent,
+        moodMatch
+      );
 
       recommendations.push({
         restaurant,
@@ -31,15 +39,16 @@ export class RestaurantRecommendationService {
     }
 
     // Sort by score (highest first) and return top 3
-    return recommendations
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
+    return recommendations.sort((a, b) => b.score - a.score).slice(0, 3);
   }
 
   /**
    * Calculate overall score for a restaurant based on multiple factors
    */
-  private calculateRestaurantScore(restaurant: Restaurant, params: RestaurantSearchParams): number {
+  private calculateRestaurantScore(
+    restaurant: Restaurant,
+    params: RestaurantSearchParams
+  ): number {
     let score = 0;
     let factors = 0;
 
@@ -57,12 +66,18 @@ export class RestaurantRecommendationService {
     }
 
     // Cuisine match factor (20% weight)
-    const cuisineMatch = this.calculateCuisineMatch(restaurant, params.cuisineTypes);
+    const cuisineMatch = this.calculateCuisineMatch(
+      restaurant,
+      params.cuisineTypes
+    );
     score += cuisineMatch * 20;
     factors++;
 
     // Event suitability factor (10% weight)
-    const eventSuitability = this.calculateEventSuitability(restaurant, params.event);
+    const eventSuitability = this.calculateEventSuitability(
+      restaurant,
+      params.event
+    );
     score += (eventSuitability / 10) * 10;
     factors++;
 
@@ -77,16 +92,24 @@ export class RestaurantRecommendationService {
   /**
    * Calculate how well restaurant cuisine matches search criteria
    */
-  private calculateCuisineMatch(restaurant: Restaurant, searchCuisines: string[]): number {
+  private calculateCuisineMatch(
+    restaurant: Restaurant,
+    searchCuisines: string[]
+  ): number {
     if (searchCuisines.length === 0) return 1; // No specific cuisine preference
 
-    const restaurantCuisines = restaurant.cuisineTypes.map(c => c.toLowerCase());
+    const restaurantCuisines = restaurant.cuisineTypes.map(c =>
+      c.toLowerCase()
+    );
     const searchCuisinesLower = searchCuisines.map(c => c.toLowerCase());
 
     let matches = 0;
     for (const searchCuisine of searchCuisinesLower) {
       for (const restaurantCuisine of restaurantCuisines) {
-        if (restaurantCuisine.includes(searchCuisine) || searchCuisine.includes(restaurantCuisine)) {
+        if (
+          restaurantCuisine.includes(searchCuisine) ||
+          searchCuisine.includes(restaurantCuisine)
+        ) {
           matches++;
           break;
         }
@@ -99,42 +122,63 @@ export class RestaurantRecommendationService {
   /**
    * Calculate suitability for specific events (1-10 scale)
    */
-  private calculateEventSuitability(restaurant: Restaurant, event: string): number {
+  private calculateEventSuitability(
+    restaurant: Restaurant,
+    event: string
+  ): number {
     const eventFactors = {
-      'dating': {
+      dating: {
         preferredPriceLevel: [2, 3, 4], // Mid to high-end
-        preferredCuisines: ['italian', 'french', 'japanese', 'mediterranean', 'fine dining'],
-        avoidCuisines: ['fast food', 'buffet'],
+        preferredCuisines: [
+          "italian",
+          "french",
+          "japanese",
+          "mediterranean",
+          "fine dining",
+        ],
+        avoidCuisines: ["fast food", "buffet"],
         minRating: 4.0,
-        atmosphereKeywords: ['romantic', 'intimate', 'cozy', 'elegant'],
+        atmosphereKeywords: ["romantic", "intimate", "cozy", "elegant"],
       },
-      'family gathering': {
+      "family gathering": {
         preferredPriceLevel: [1, 2, 3], // Budget to mid-range
-        preferredCuisines: ['american', 'italian', 'chinese', 'mexican', 'pizza'],
-        avoidCuisines: ['fine dining'],
+        preferredCuisines: [
+          "american",
+          "italian",
+          "chinese",
+          "mexican",
+          "pizza",
+        ],
+        avoidCuisines: ["fine dining"],
         minRating: 3.5,
-        atmosphereKeywords: ['family-friendly', 'spacious', 'casual', 'kids'],
+        atmosphereKeywords: ["family-friendly", "spacious", "casual", "kids"],
       },
-      'business meeting': {
+      "business meeting": {
         preferredPriceLevel: [2, 3, 4], // Mid to high-end
-        preferredCuisines: ['american', 'italian', 'steakhouse', 'seafood'],
-        avoidCuisines: ['fast food', 'buffet'],
+        preferredCuisines: ["american", "italian", "steakhouse", "seafood"],
+        avoidCuisines: ["fast food", "buffet"],
         minRating: 4.0,
-        atmosphereKeywords: ['quiet', 'professional', 'upscale', 'private'],
+        atmosphereKeywords: ["quiet", "professional", "upscale", "private"],
       },
-      'casual dining': {
+      "casual dining": {
         preferredPriceLevel: [1, 2], // Budget to mid-range
-        preferredCuisines: ['american', 'pizza', 'cafe', 'mexican', 'asian'],
+        preferredCuisines: ["american", "pizza", "cafe", "mexican", "asian"],
         avoidCuisines: [],
         minRating: 3.0,
-        atmosphereKeywords: ['casual', 'relaxed', 'friendly'],
+        atmosphereKeywords: ["casual", "relaxed", "friendly"],
       },
-      'celebration': {
+      celebration: {
         preferredPriceLevel: [3, 4], // High-end
-        preferredCuisines: ['fine dining', 'steakhouse', 'seafood', 'french', 'italian'],
-        avoidCuisines: ['fast food', 'cafe'],
+        preferredCuisines: [
+          "fine dining",
+          "steakhouse",
+          "seafood",
+          "french",
+          "italian",
+        ],
+        avoidCuisines: ["fast food", "cafe"],
         minRating: 4.2,
-        atmosphereKeywords: ['upscale', 'elegant', 'special', 'celebration'],
+        atmosphereKeywords: ["upscale", "elegant", "special", "celebration"],
       },
     };
 
@@ -144,16 +188,21 @@ export class RestaurantRecommendationService {
     let score = 5; // Base score
 
     // Price level suitability
-    if (restaurant.priceLevel && factors.preferredPriceLevel.includes(restaurant.priceLevel)) {
+    if (
+      restaurant.priceLevel &&
+      factors.preferredPriceLevel.includes(restaurant.priceLevel)
+    ) {
       score += 2;
     }
 
     // Cuisine suitability
-    const restaurantCuisines = restaurant.cuisineTypes.map(c => c.toLowerCase());
-    const hasPreferredCuisine = factors.preferredCuisines.some(cuisine => 
+    const restaurantCuisines = restaurant.cuisineTypes.map(c =>
+      c.toLowerCase()
+    );
+    const hasPreferredCuisine = factors.preferredCuisines.some(cuisine =>
       restaurantCuisines.some(rc => rc.includes(cuisine))
     );
-    const hasAvoidedCuisine = factors.avoidCuisines.some(cuisine => 
+    const hasAvoidedCuisine = factors.avoidCuisines.some(cuisine =>
       restaurantCuisines.some(rc => rc.includes(cuisine))
     );
 
@@ -175,16 +224,23 @@ export class RestaurantRecommendationService {
    */
   private calculateMoodMatch(restaurant: Restaurant, mood: string): number {
     const moodKeywords = {
-      'romantic': ['intimate', 'cozy', 'candlelit', 'wine', 'date', 'romantic'],
-      'casual': ['casual', 'relaxed', 'friendly', 'laid-back', 'comfortable'],
-      'upscale': ['upscale', 'elegant', 'sophisticated', 'fine', 'luxury'],
-      'fun': ['lively', 'energetic', 'vibrant', 'entertainment', 'music'],
-      'quiet': ['quiet', 'peaceful', 'serene', 'calm', 'tranquil'],
-      'adventurous': ['unique', 'exotic', 'fusion', 'creative', 'innovative'],
-      'traditional': ['traditional', 'authentic', 'classic', 'heritage', 'original'],
+      romantic: ["intimate", "cozy", "candlelit", "wine", "date", "romantic"],
+      casual: ["casual", "relaxed", "friendly", "laid-back", "comfortable"],
+      upscale: ["upscale", "elegant", "sophisticated", "fine", "luxury"],
+      fun: ["lively", "energetic", "vibrant", "entertainment", "music"],
+      quiet: ["quiet", "peaceful", "serene", "calm", "tranquil"],
+      adventurous: ["unique", "exotic", "fusion", "creative", "innovative"],
+      traditional: [
+        "traditional",
+        "authentic",
+        "classic",
+        "heritage",
+        "original",
+      ],
     };
 
-    const keywords = moodKeywords[mood.toLowerCase() as keyof typeof moodKeywords] || [];
+    const keywords =
+      moodKeywords[mood.toLowerCase() as keyof typeof moodKeywords] || [];
     if (keywords.length === 0) return 5; // Default score
 
     let score = 5; // Base score
@@ -194,8 +250,10 @@ export class RestaurantRecommendationService {
     const searchText = [
       restaurant.name,
       ...restaurant.cuisineTypes,
-      ...(restaurant.reviews?.map(r => r.text) || [])
-    ].join(' ').toLowerCase();
+      ...(restaurant.reviews?.map(r => r.text) || []),
+    ]
+      .join(" ")
+      .toLowerCase();
 
     for (const keyword of keywords) {
       if (searchText.includes(keyword)) {
@@ -210,9 +268,12 @@ export class RestaurantRecommendationService {
 
     // Consider price level for certain moods
     if (restaurant.priceLevel) {
-      if (mood.toLowerCase() === 'upscale' && restaurant.priceLevel >= 3) {
+      if (mood.toLowerCase() === "upscale" && restaurant.priceLevel >= 3) {
         score += 1;
-      } else if (mood.toLowerCase() === 'casual' && restaurant.priceLevel <= 2) {
+      } else if (
+        mood.toLowerCase() === "casual" &&
+        restaurant.priceLevel <= 2
+      ) {
         score += 1;
       }
     }
@@ -224,33 +285,40 @@ export class RestaurantRecommendationService {
    * Generate human-readable reasoning for the recommendation
    */
   private generateReasoning(
-    restaurant: Restaurant, 
-    params: RestaurantSearchParams, 
-    score: number, 
-    eventSuitability: number, 
+    restaurant: Restaurant,
+    params: RestaurantSearchParams,
+    score: number,
+    eventSuitability: number,
     moodMatch: number
   ): string {
     const reasons: string[] = [];
 
     // Rating and reviews
     if (restaurant.rating >= 4.5) {
-      reasons.push(`Excellent rating of ${restaurant.rating}/5 with ${restaurant.userRatingsTotal} reviews`);
+      reasons.push(
+        `Excellent rating of ${restaurant.rating}/5 with ${restaurant.userRatingsTotal} reviews`
+      );
     } else if (restaurant.rating >= 4.0) {
-      reasons.push(`High rating of ${restaurant.rating}/5 with ${restaurant.userRatingsTotal} reviews`);
+      reasons.push(
+        `High rating of ${restaurant.rating}/5 with ${restaurant.userRatingsTotal} reviews`
+      );
     } else if (restaurant.rating >= 3.5) {
       reasons.push(`Good rating of ${restaurant.rating}/5`);
     }
 
     // Cuisine match
     if (params.cuisineTypes.length > 0) {
-      const matchingCuisines = restaurant.cuisineTypes.filter(rc => 
-        params.cuisineTypes.some(sc => 
-          rc.toLowerCase().includes(sc.toLowerCase()) || 
-          sc.toLowerCase().includes(rc.toLowerCase())
+      const matchingCuisines = restaurant.cuisineTypes.filter(rc =>
+        params.cuisineTypes.some(
+          sc =>
+            rc.toLowerCase().includes(sc.toLowerCase()) ||
+            sc.toLowerCase().includes(rc.toLowerCase())
         )
       );
       if (matchingCuisines.length > 0) {
-        reasons.push(`Serves ${matchingCuisines.join(', ')} cuisine as requested`);
+        reasons.push(
+          `Serves ${matchingCuisines.join(", ")} cuisine as requested`
+        );
       }
     }
 
@@ -270,17 +338,23 @@ export class RestaurantRecommendationService {
 
     // Price level
     if (restaurant.priceLevel) {
-      const priceLabels = ['', 'Budget-friendly', 'Moderately priced', 'Upscale', 'High-end'];
+      const priceLabels = [
+        "",
+        "Budget-friendly",
+        "Moderately priced",
+        "Upscale",
+        "High-end",
+      ];
       reasons.push(priceLabels[restaurant.priceLevel]);
     }
 
     // Opening hours
     if (restaurant.openingHours?.openNow) {
-      reasons.push('Currently open');
+      reasons.push("Currently open");
     }
 
-    return reasons.length > 0 
-      ? reasons.join('. ') + '.'
-      : 'Recommended based on location and general criteria.';
+    return reasons.length > 0
+      ? reasons.join(". ") + "."
+      : "Recommended based on location and general criteria.";
   }
-} 
+}

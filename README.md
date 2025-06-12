@@ -275,7 +275,7 @@ Edit the `cuisineMap` in `src/services/googleMapsService.ts`:
 
 ```typescript
 const cuisineMap: { [key: string]: string } = {
-  "new_cuisine_type": "Display Name"
+  new_cuisine_type: "Display Name",
   // ... existing mappings
 };
 ```

@@ -22,6 +22,7 @@ Find restaurants for a romantic dinner date in San Francisco:
 ```
 
 **Expected Response:**
+
 - Top 3 restaurants with romantic atmosphere
 - High ratings and upscale ambiance
 - Italian/French/Mediterranean cuisine focus
@@ -36,7 +37,7 @@ Find family-friendly restaurants for a weekend gathering:
   "tool": "search_restaurants",
   "parameters": {
     "latitude": 40.7128,
-    "longitude": -74.0060,
+    "longitude": -74.006,
     "cuisineTypes": ["American", "Italian", "Mexican"],
     "mood": "casual",
     "event": "family gathering",
@@ -47,6 +48,7 @@ Find family-friendly restaurants for a weekend gathering:
 ```
 
 **Expected Response:**
+
 - Family-friendly restaurants
 - Casual atmosphere
 - Budget-to-moderate pricing
@@ -72,6 +74,7 @@ Find upscale restaurants suitable for business discussions:
 ```
 
 **Expected Response:**
+
 - Professional, quiet atmosphere
 - High-end restaurants
 - Suitable for business conversations
@@ -91,6 +94,7 @@ Get detailed information about a specific restaurant:
 ```
 
 **Response includes:**
+
 - Complete restaurant information
 - Reviews and ratings
 - Photos
@@ -113,6 +117,7 @@ Check if a restaurant has availability for your preferred time:
 ```
 
 **Response includes:**
+
 - Availability status
 - Alternative time suggestions if unavailable
 - Booking recommendations
@@ -137,6 +142,7 @@ Attempt to make a reservation (mock implementation):
 ```
 
 **Response includes:**
+
 - Booking confirmation or failure
 - Reservation details
 - Confirmation number
@@ -156,6 +162,7 @@ Get instructions on how to make a reservation at a restaurant:
 ```
 
 **Response includes:**
+
 - Phone number for reservations
 - Website booking links
 - Opening hours
@@ -180,12 +187,14 @@ Find restaurants using a place name instead of coordinates:
 ```
 
 **Expected Response:**
+
 - Restaurants near Tokyo city center
 - High-quality Japanese cuisine
 - Professional atmosphere suitable for business
 - Mid-to-high price range
 
 **Alternative place name examples:**
+
 - `"New York, NY"` - Search in New York City
 - `"London, UK"` - Search in London
 - `"Paris, France"` - Search in Paris
@@ -195,6 +204,7 @@ Find restaurants using a place name instead of coordinates:
 ## Common Use Cases
 
 ### 1. Date Night Planning
+
 ```bash
 # Step 1: Search for romantic restaurants
 search_restaurants -> romantic Italian restaurants
@@ -210,6 +220,7 @@ get_booking_instructions -> how to reserve
 ```
 
 ### 2. Group Dining
+
 ```bash
 # Step 1: Search for family-friendly options
 search_restaurants -> casual, large party suitable
@@ -225,6 +236,7 @@ make_reservation -> book the table
 ```
 
 ### 3. Business Entertainment
+
 ```bash
 # Step 1: Find upscale, quiet restaurants
 search_restaurants -> business meeting suitable
@@ -256,4 +268,4 @@ The server handles various error conditions gracefully:
 - **No Results Found**: Suggests expanding search criteria
 - **Invalid Location**: Prompts for valid latitude/longitude
 - **Restaurant Not Found**: Returns appropriate error for invalid place IDs
-- **Booking Failures**: Provides alternative suggestions and manual booking instructions 
+- **Booking Failures**: Provides alternative suggestions and manual booking instructions

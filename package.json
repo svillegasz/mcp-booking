@@ -23,11 +23,14 @@
   "license": "MIT",
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.3.42",
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.12.1",
     "axios": "^1.6.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "express": "^5.1.0",
+    "zod": "^3.25.56"
   },
   "devDependencies": {
+    "@types/express": "^5.0.3",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",

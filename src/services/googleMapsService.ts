@@ -1,14 +1,7 @@
 import { Client } from "@googlemaps/google-maps-services-js";
 import https from "https";
 import axios from "axios";
-import {
-  Location,
-  Restaurant,
-  RestaurantSearchParams,
-  GooglePlacesResponse,
-  GooglePlaceDetailsResponse,
-  GoogleGeocodingResponse,
-} from "../types/index.js";
+import { Location, Restaurant, RestaurantSearchParams } from "../types/index.js";
 
 export class GoogleMapsService {
   private client: Client;
@@ -111,10 +104,10 @@ export class GoogleMapsService {
       if (keyword) {
         searchQuery = keyword;
         // If cuisine types are also provided, combine them
-        if (cuisineTypes.length > 0) {
+        if (cuisineTypes && cuisineTypes.length > 0) {
           searchQuery += ` ${cuisineTypes.join(" OR ")}`;
         }
-      } else if (cuisineTypes.length > 0) {
+      } else if (cuisineTypes && cuisineTypes.length > 0) {
         searchQuery = cuisineTypes.join(" OR ");
       } else {
         searchQuery = "restaurant";
@@ -147,7 +140,6 @@ export class GoogleMapsService {
       // Get detailed information for each restaurant
       const restaurants: Restaurant[] = [];
       const results = response.data.results || [];
-      let filteredOutCount = 0;
 
       // Limit to top 20 results to avoid API quota issues
       const limitedResults = results.slice(0, 20);
@@ -173,8 +165,6 @@ export class GoogleMapsService {
                 // Add distance information to the restaurant object
                 restaurant.distance = Math.round(distance);
                 restaurants.push(restaurant);
-              } else {
-                filteredOutCount++;
               }
             }
           }
@@ -320,10 +310,7 @@ export class GoogleMapsService {
 
       // Generate Google Maps URL
       const googleMapsUrl = this.generateGoogleMapsUrl(
-        place.place_id,
-        place.name,
-        place.geometry.location.lat,
-        place.geometry.location.lng
+        place.place_id
       );
 
       return {
@@ -538,12 +525,7 @@ export class GoogleMapsService {
   /**
    * Generate Google Maps URL for a restaurant
    */
-  private generateGoogleMapsUrl(
-    placeId: string,
-    name: string,
-    latitude: number,
-    longitude: number
-  ): string {
+  private generateGoogleMapsUrl(placeId: string): string {
     // Use place_id for the most accurate Google Maps URL
     // This format directly opens the place in Google Maps
     return `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${placeId}`;

@@ -11,12 +11,7 @@ import dotenv from "dotenv";
 import { GoogleMapsService } from "./services/googleMapsService.js";
 import { RestaurantRecommendationService } from "./services/restaurantRecommendationService.js";
 import { BookingService } from "./services/bookingService.js";
-import {
-  RestaurantSearchParams,
-  Location,
-  BookingRequest,
-  Restaurant,
-} from "./types/index.js";
+import { RestaurantSearchParams, BookingRequest } from "./types/index.js";
 
 // Load environment variables
 dotenv.config();
@@ -64,6 +59,7 @@ class RestaurantBookingServer {
     // Search restaurants tool
     server.tool(
       "search_restaurants",
+      "Search for restaurants based on location, cuisine, keyword, mood, event, radius, price level, and locale",
       {
         latitude: z
           .number()
@@ -152,6 +148,7 @@ class RestaurantBookingServer {
     // Get restaurant details tool
     server.tool(
       "get_restaurant_details",
+      "Get details of a restaurant",
       {
         placeId: z.string().describe("Google Places ID of the restaurant"),
         locale: z
@@ -169,6 +166,7 @@ class RestaurantBookingServer {
     // Get booking instructions tool
     server.tool(
       "get_booking_instructions",
+      "Get booking instructions for a restaurant",
       {
         placeId: z.string().describe("Google Places ID of the restaurant"),
         locale: z
@@ -186,6 +184,7 @@ class RestaurantBookingServer {
     // Check availability tool
     server.tool(
       "check_availability",
+      "Check availability of a restaurant for a given date and time",
       {
         placeId: z.string().describe("Google Places ID of the restaurant"),
         dateTime: z
@@ -214,6 +213,7 @@ class RestaurantBookingServer {
     // Make reservation tool
     server.tool(
       "make_reservation",
+      "Make a reservation for a restaurant",
       {
         placeId: z.string().describe("Google Places ID of the restaurant"),
         partySize: z.number().describe("Number of people in the party"),

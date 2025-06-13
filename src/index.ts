@@ -97,14 +97,10 @@ class RestaurantBookingServer {
             'Desired mood/atmosphere (e.g., "romantic", "casual", "upscale", "fun", "quiet")'
           ),
         event: z
-          .enum([
-            "dating",
-            "family gathering",
-            "business meeting",
-            "casual dining",
-            "celebration",
-          ])
-          .describe("Type of event or occasion"),
+          .string()
+          .describe(
+            "Type of event or occasion (e.g., 'dating', 'gathering', 'business', 'casual', 'celebration')"
+          ),
         radius: z
           .number()
           .optional()
@@ -131,12 +127,7 @@ class RestaurantBookingServer {
         cuisineTypes?: string[];
         keyword?: string;
         mood: string;
-        event:
-          | "dating"
-          | "family gathering"
-          | "business meeting"
-          | "casual dining"
-          | "celebration";
+        event: string;
         radius?: number;
         priceLevel?: number;
         locale?: string;

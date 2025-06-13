@@ -8,12 +8,7 @@ export interface RestaurantSearchParams {
   placeName?: string; // 🆕 NEW: Alternative to location - place name to geocode
   cuisineTypes: string[];
   mood: string;
-  event:
-    | "dating"
-    | "family gathering"
-    | "business meeting"
-    | "casual dining"
-    | "celebration";
+  event: string;
   radius?: number; // in meters, default 20km
   priceLevel?: 1 | 2 | 3 | 4; // 1 = inexpensive, 4 = very expensive
   keyword?: string; // 🆕 NEW: Search for specific food types like "hotpot", "sushi", "pizza", etc.

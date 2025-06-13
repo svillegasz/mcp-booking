@@ -140,7 +140,7 @@ export class RestaurantRecommendationService {
         minRating: 4.0,
         atmosphereKeywords: ["romantic", "intimate", "cozy", "elegant"],
       },
-      "family gathering": {
+      gathering: {
         preferredPriceLevel: [1, 2, 3], // Budget to mid-range
         preferredCuisines: [
           "american",
@@ -153,14 +153,14 @@ export class RestaurantRecommendationService {
         minRating: 3.5,
         atmosphereKeywords: ["family-friendly", "spacious", "casual", "kids"],
       },
-      "business meeting": {
+      business: {
         preferredPriceLevel: [2, 3, 4], // Mid to high-end
         preferredCuisines: ["american", "italian", "steakhouse", "seafood"],
         avoidCuisines: ["fast food", "buffet"],
         minRating: 4.0,
         atmosphereKeywords: ["quiet", "professional", "upscale", "private"],
       },
-      "casual dining": {
+      casual: {
         preferredPriceLevel: [1, 2], // Budget to mid-range
         preferredCuisines: ["american", "pizza", "cafe", "mexican", "asian"],
         avoidCuisines: [],

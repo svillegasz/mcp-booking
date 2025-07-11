@@ -1,7 +1,11 @@
-import { Client } from "@googlemaps/google-maps-services-js";
-import https from "https";
-import axios from "axios";
-import { Location, Restaurant, RestaurantSearchParams } from "../types/index.js";
+import { Client } from '@googlemaps/google-maps-services-js';
+import https from 'https';
+import axios from 'axios';
+import {
+  Location,
+  Restaurant,
+  RestaurantSearchParams,
+} from '../types/index.js';
 
 export class GoogleMapsService {
   private client: Client;
@@ -13,9 +17,13 @@ export class GoogleMapsService {
       rejectUnauthorized: false,
     });
 
-    // Create axios instance with custom HTTPS agent
+    // Create axios instance with custom HTTPS agent and timeout
     const axiosInstance = axios.create({
       httpsAgent: httpsAgent,
+      timeout: 10000, // 10 second timeout
+      headers: {
+        'User-Agent': 'mcp-booking-service/1.0',
+      },
     });
 
     this.client = new Client({
@@ -59,6 +67,36 @@ export class GoogleMapsService {
   }
 
   /**
+   * Execute promises with limited concurrency to avoid overwhelming the API
+   */
+  private async executeConcurrently<T>(
+    promises: (() => Promise<T>)[],
+    concurrency: number = 5
+  ): Promise<T[]> {
+    const results: T[] = [];
+    const executing: Promise<void>[] = [];
+
+    for (const promiseFactory of promises) {
+      const promise = promiseFactory().then(result => {
+        results.push(result);
+      });
+
+      executing.push(promise);
+
+      if (executing.length >= concurrency) {
+        await Promise.race(executing);
+        executing.splice(
+          executing.findIndex(p => p === promise),
+          1
+        );
+      }
+    }
+
+    await Promise.all(executing);
+    return results;
+  }
+
+  /**
    * Search for restaurants based on location, cuisine types, and other criteria
    *
    * This method ensures strict radius filtering by:
@@ -79,7 +117,7 @@ export class GoogleMapsService {
         keyword,
         radius = 2000,
         priceLevel,
-        locale = "en",
+        locale = 'en',
       } = params;
 
       // Determine the location to use for search
@@ -93,31 +131,31 @@ export class GoogleMapsService {
         searchLocation = location;
       } else {
         throw new Error(
-          "Either location coordinates or placeName must be provided"
+          'Either location coordinates or placeName must be provided'
         );
       }
 
       // Build search query based on cuisine types and keyword
-      let searchQuery = "";
+      let searchQuery = '';
 
       // If keyword is provided, prioritize it
       if (keyword) {
         searchQuery = keyword;
         // If cuisine types are also provided, combine them
         if (cuisineTypes && cuisineTypes.length > 0) {
-          searchQuery += ` ${cuisineTypes.join(" OR ")}`;
+          searchQuery += ` ${cuisineTypes.join(' OR ')}`;
         }
       } else if (cuisineTypes && cuisineTypes.length > 0) {
-        searchQuery = cuisineTypes.join(" OR ");
+        searchQuery = cuisineTypes.join(' OR ');
       } else {
-        searchQuery = "restaurant";
+        searchQuery = 'restaurant';
       }
 
       // Build API request parameters
       const apiParams: any = {
         location: `${searchLocation.latitude},${searchLocation.longitude}`,
         radius,
-        type: "restaurant",
+        type: 'restaurant',
         keyword: searchQuery,
         language: locale,
         key: this.apiKey,
@@ -133,24 +171,25 @@ export class GoogleMapsService {
         params: apiParams,
       });
 
-      if (response.data.status !== "OK") {
+      if (response.data.status !== 'OK') {
         throw new Error(`Google Places API error: ${response.data.status}`);
       }
 
       // Get detailed information for each restaurant
-      const restaurants: Restaurant[] = [];
       const results = response.data.results || [];
 
       // Limit to top 20 results to avoid API quota issues
       const limitedResults = results.slice(0, 20);
 
-      for (const place of limitedResults) {
+      // 🚀 PERFORMANCE OPTIMIZATION: Use controlled concurrency for API calls
+      const restaurantPromises = limitedResults.map(place => async () => {
         try {
           if (place.place_id) {
             const restaurant = await this.getRestaurantDetails(
               place.place_id,
               locale
             );
+
             if (restaurant) {
               // Calculate distance from search location to restaurant
               const distance = this.calculateDistance(
@@ -164,7 +203,7 @@ export class GoogleMapsService {
               if (distance <= radius) {
                 // Add distance information to the restaurant object
                 restaurant.distance = Math.round(distance);
-                restaurants.push(restaurant);
+                return restaurant;
               }
             }
           }
@@ -174,7 +213,19 @@ export class GoogleMapsService {
             error
           );
         }
-      }
+        return null;
+      });
+
+      // Wait for all API calls to complete with controlled concurrency (max 5 simultaneous)
+      const restaurantResults = await this.executeConcurrently(
+        restaurantPromises,
+        5
+      );
+
+      // Filter out null results
+      const restaurants = restaurantResults.filter(
+        (restaurant): restaurant is Restaurant => restaurant !== null
+      );
 
       // Sort restaurants by distance (closest first)
       restaurants.sort((a, b) => {
@@ -188,7 +239,7 @@ export class GoogleMapsService {
       // console.error('Error searching restaurants:', error);
       throw new Error(
         `Failed to search restaurants: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`
       );
     }
@@ -199,7 +250,7 @@ export class GoogleMapsService {
    */
   async geocodePlaceName(
     placeName: string,
-    locale: string = "en"
+    locale: string = 'en'
   ): Promise<Location> {
     try {
       const response = await this.client.geocode({
@@ -210,7 +261,7 @@ export class GoogleMapsService {
         },
       });
 
-      if (response.data.status !== "OK") {
+      if (response.data.status !== 'OK') {
         throw new Error(`Geocoding API error: ${response.data.status}`);
       }
 
@@ -230,7 +281,7 @@ export class GoogleMapsService {
       console.error(`Error geocoding place name "${placeName}":`, error);
       throw new Error(
         `Failed to geocode place name: ${
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : 'Unknown error'
         }`
       );
     }
@@ -241,7 +292,7 @@ export class GoogleMapsService {
    */
   async getRestaurantDetails(
     placeId: string,
-    locale: string = "en"
+    locale: string = 'en'
   ): Promise<Restaurant | null> {
     try {
       const response = await this.client.placeDetails({
@@ -250,39 +301,39 @@ export class GoogleMapsService {
           language: locale as any,
           fields: [
             // Basic fields
-            "place_id",
-            "name",
-            "formatted_address",
-            "geometry",
-            "types",
+            'place_id',
+            'name',
+            'formatted_address',
+            'geometry',
+            'types',
             // "photos",
             // Contact fields
-            "formatted_phone_number",
-            "website",
-            "opening_hours",
+            'formatted_phone_number',
+            'website',
+            'opening_hours',
             // Atmosphere fields (including reservation-related)
-            "rating",
-            "user_ratings_total",
-            "price_level",
-            "reviews",
-            "reservable", // 🆕 NEW: Indicates if place supports reservations
-            "curbside_pickup", // 🆕 NEW: Supports curbside pickup
-            "delivery", // 🆕 NEW: Supports delivery
-            "dine_in", // 🆕 NEW: Supports dine-in
-            "takeout", // 🆕 NEW: Supports takeout
-            "serves_breakfast", // 🆕 NEW: Serves breakfast
-            "serves_lunch", // 🆕 NEW: Serves lunch
-            "serves_dinner", // 🆕 NEW: Serves dinner
-            "serves_brunch", // 🆕 NEW: Serves brunch
-            "serves_beer", // 🆕 NEW: Serves beer
-            "serves_wine", // 🆕 NEW: Serves wine
-            "serves_vegetarian_food", // 🆕 NEW: Serves vegetarian food
+            'rating',
+            'user_ratings_total',
+            'price_level',
+            'reviews',
+            'reservable', // 🆕 NEW: Indicates if place supports reservations
+            'curbside_pickup', // 🆕 NEW: Supports curbside pickup
+            'delivery', // 🆕 NEW: Supports delivery
+            'dine_in', // 🆕 NEW: Supports dine-in
+            'takeout', // 🆕 NEW: Supports takeout
+            'serves_breakfast', // 🆕 NEW: Serves breakfast
+            'serves_lunch', // 🆕 NEW: Serves lunch
+            'serves_dinner', // 🆕 NEW: Serves dinner
+            'serves_brunch', // 🆕 NEW: Serves brunch
+            'serves_beer', // 🆕 NEW: Serves beer
+            'serves_wine', // 🆕 NEW: Serves wine
+            'serves_vegetarian_food', // 🆕 NEW: Serves vegetarian food
           ],
           key: this.apiKey,
         },
       });
 
-      if (response.data.status !== "OK") {
+      if (response.data.status !== 'OK') {
         console.warn(
           `Failed to get place details for ${placeId}: ${response.data.status}`
         );
@@ -309,9 +360,7 @@ export class GoogleMapsService {
       );
 
       // Generate Google Maps URL
-      const googleMapsUrl = this.generateGoogleMapsUrl(
-        place.place_id
-      );
+      const googleMapsUrl = this.generateGoogleMapsUrl(place.place_id);
 
       return {
         placeId: place.place_id,
@@ -352,12 +401,12 @@ export class GoogleMapsService {
               periods: place.opening_hours.periods?.map((period: any) => ({
                 open: {
                   day: period.open?.day || 0,
-                  time: period.open?.time || "0000",
+                  time: period.open?.time || '0000',
                 },
                 close: period.close
                   ? {
                       day: period.close.day || 0,
-                      time: period.close.time || "0000",
+                      time: period.close.time || '0000',
                     }
                   : undefined,
               })),
@@ -365,11 +414,11 @@ export class GoogleMapsService {
             }
           : undefined,
         reviews: place.reviews?.slice(0, 5).map((review: any) => ({
-          authorName: review.author_name || "Anonymous",
+          authorName: review.author_name || 'Anonymous',
           rating: review.rating || 0,
-          text: review.text || "",
+          text: review.text || '',
           time:
-            typeof review.time === "number"
+            typeof review.time === 'number'
               ? review.time
               : parseInt(review.time) || 0,
         })),
@@ -390,12 +439,12 @@ export class GoogleMapsService {
     reservable: boolean;
     bookingUrl?: string;
     bookingPlatform?:
-      | "opentable"
-      | "resy"
-      | "yelp"
-      | "restaurant_website"
-      | "google_reserve"
-      | "other";
+      | 'opentable'
+      | 'resy'
+      | 'yelp'
+      | 'restaurant_website'
+      | 'google_reserve'
+      | 'other';
     supportsOnlineBooking: boolean;
     requiresPhone: boolean;
   } {
@@ -403,12 +452,12 @@ export class GoogleMapsService {
       reservable: boolean;
       bookingUrl?: string;
       bookingPlatform?:
-        | "opentable"
-        | "resy"
-        | "yelp"
-        | "restaurant_website"
-        | "google_reserve"
-        | "other";
+        | 'opentable'
+        | 'resy'
+        | 'yelp'
+        | 'restaurant_website'
+        | 'google_reserve'
+        | 'other';
       supportsOnlineBooking: boolean;
       requiresPhone: boolean;
     } = {
@@ -428,24 +477,24 @@ export class GoogleMapsService {
       const url = website.toLowerCase();
 
       // OpenTable detection
-      if (url.includes("opentable.com") || url.includes("opentable")) {
+      if (url.includes('opentable.com') || url.includes('opentable')) {
         return {
           ...bookingInfo,
           reservable: true,
           bookingUrl: website,
-          bookingPlatform: "opentable",
+          bookingPlatform: 'opentable',
           supportsOnlineBooking: true,
           requiresPhone: false,
         };
       }
 
       // Resy detection
-      if (url.includes("resy.com") || url.includes("resy")) {
+      if (url.includes('resy.com') || url.includes('resy')) {
         return {
           ...bookingInfo,
           reservable: true,
           bookingUrl: website,
-          bookingPlatform: "resy",
+          bookingPlatform: 'resy',
           supportsOnlineBooking: true,
           requiresPhone: false,
         };
@@ -453,14 +502,14 @@ export class GoogleMapsService {
 
       // Yelp reservations detection
       if (
-        url.includes("yelp.com") &&
-        (url.includes("reservations") || url.includes("book"))
+        url.includes('yelp.com') &&
+        (url.includes('reservations') || url.includes('book'))
       ) {
         return {
           ...bookingInfo,
           reservable: true,
           bookingUrl: website,
-          bookingPlatform: "yelp",
+          bookingPlatform: 'yelp',
           supportsOnlineBooking: true,
           requiresPhone: false,
         };
@@ -468,14 +517,14 @@ export class GoogleMapsService {
 
       // Google Reserve detection
       if (
-        url.includes("reserve.google.com") ||
-        url.includes("google.com/reserve")
+        url.includes('reserve.google.com') ||
+        url.includes('google.com/reserve')
       ) {
         return {
           ...bookingInfo,
           reservable: true,
           bookingUrl: website,
-          bookingPlatform: "google_reserve",
+          bookingPlatform: 'google_reserve',
           supportsOnlineBooking: true,
           requiresPhone: false,
         };
@@ -487,7 +536,7 @@ export class GoogleMapsService {
           ...bookingInfo,
           reservable: true,
           bookingUrl: website,
-          bookingPlatform: "restaurant_website",
+          bookingPlatform: 'restaurant_website',
           supportsOnlineBooking: true,
           requiresPhone: false,
         };
@@ -496,7 +545,7 @@ export class GoogleMapsService {
       // Website exists but no clear booking platform detected
       bookingInfo.reservable = true;
       bookingInfo.bookingUrl = website;
-      bookingInfo.bookingPlatform = "other";
+      bookingInfo.bookingPlatform = 'other';
     }
 
     return bookingInfo;
@@ -507,16 +556,16 @@ export class GoogleMapsService {
    */
   private hasBookingKeywords(url: string): boolean {
     const bookingKeywords = [
-      "reservation",
-      "reservations",
-      "book",
-      "booking",
-      "table",
-      "reserve",
-      "dine",
-      "dining",
-      "order",
-      "menu",
+      'reservation',
+      'reservations',
+      'book',
+      'booking',
+      'table',
+      'reserve',
+      'dine',
+      'dining',
+      'order',
+      'menu',
     ];
 
     return bookingKeywords.some(keyword => url.includes(keyword));
@@ -536,34 +585,34 @@ export class GoogleMapsService {
    */
   private extractCuisineTypes(types: string[]): string[] {
     const cuisineMap: { [key: string]: string } = {
-      chinese_restaurant: "Chinese",
-      japanese_restaurant: "Japanese",
-      korean_restaurant: "Korean",
-      thai_restaurant: "Thai",
-      vietnamese_restaurant: "Vietnamese",
-      indian_restaurant: "Indian",
-      italian_restaurant: "Italian",
-      french_restaurant: "French",
-      mexican_restaurant: "Mexican",
-      american_restaurant: "American",
-      mediterranean_restaurant: "Mediterranean",
-      greek_restaurant: "Greek",
-      turkish_restaurant: "Turkish",
-      spanish_restaurant: "Spanish",
-      german_restaurant: "German",
-      brazilian_restaurant: "Brazilian",
-      seafood_restaurant: "Seafood",
-      steakhouse: "Steakhouse",
-      pizza_restaurant: "Pizza",
-      bakery: "Bakery",
-      cafe: "Cafe",
-      fast_food_restaurant: "Fast Food",
-      fine_dining_restaurant: "Fine Dining",
-      buffet_restaurant: "Buffet",
-      barbecue_restaurant: "BBQ",
-      sushi_restaurant: "Sushi",
-      vegetarian_restaurant: "Vegetarian",
-      vegan_restaurant: "Vegan",
+      chinese_restaurant: 'Chinese',
+      japanese_restaurant: 'Japanese',
+      korean_restaurant: 'Korean',
+      thai_restaurant: 'Thai',
+      vietnamese_restaurant: 'Vietnamese',
+      indian_restaurant: 'Indian',
+      italian_restaurant: 'Italian',
+      french_restaurant: 'French',
+      mexican_restaurant: 'Mexican',
+      american_restaurant: 'American',
+      mediterranean_restaurant: 'Mediterranean',
+      greek_restaurant: 'Greek',
+      turkish_restaurant: 'Turkish',
+      spanish_restaurant: 'Spanish',
+      german_restaurant: 'German',
+      brazilian_restaurant: 'Brazilian',
+      seafood_restaurant: 'Seafood',
+      steakhouse: 'Steakhouse',
+      pizza_restaurant: 'Pizza',
+      bakery: 'Bakery',
+      cafe: 'Cafe',
+      fast_food_restaurant: 'Fast Food',
+      fine_dining_restaurant: 'Fine Dining',
+      buffet_restaurant: 'Buffet',
+      barbecue_restaurant: 'BBQ',
+      sushi_restaurant: 'Sushi',
+      vegetarian_restaurant: 'Vegetarian',
+      vegan_restaurant: 'Vegan',
     };
 
     const cuisines: string[] = [];
@@ -575,8 +624,8 @@ export class GoogleMapsService {
     }
 
     // If no specific cuisine found, add generic restaurant type
-    if (cuisines.length === 0 && types.includes("restaurant")) {
-      cuisines.push("Restaurant");
+    if (cuisines.length === 0 && types.includes('restaurant')) {
+      cuisines.push('Restaurant');
     }
 
     return cuisines;
@@ -587,12 +636,12 @@ export class GoogleMapsService {
    */
   private getPriceLevelDescription(priceLevel: number): string {
     const descriptions = {
-      1: "Inexpensive",
-      2: "Moderate",
-      3: "Expensive",
-      4: "Very Expensive",
+      1: 'Inexpensive',
+      2: 'Moderate',
+      3: 'Expensive',
+      4: 'Very Expensive',
     };
-    return descriptions[priceLevel as keyof typeof descriptions] || "Unknown";
+    return descriptions[priceLevel as keyof typeof descriptions] || 'Unknown';
   }
 
   /**
@@ -602,13 +651,13 @@ export class GoogleMapsService {
     location: Location,
     cuisineType: string,
     radius: number = 7000,
-    locale: string = "en"
+    locale: string = 'en'
   ): Promise<Restaurant[]> {
     const searchParams: RestaurantSearchParams = {
       location,
       cuisineTypes: [cuisineType],
-      mood: "",
-      event: "casual dining",
+      mood: '',
+      event: 'casual dining',
       radius,
       locale,
     };

@@ -398,30 +398,9 @@ export class GoogleMapsService {
         openingHours: place.opening_hours
           ? {
               openNow: place.opening_hours.open_now || false,
-              periods: place.opening_hours.periods?.map((period: any) => ({
-                open: {
-                  day: period.open?.day || 0,
-                  time: period.open?.time || '0000',
-                },
-                close: period.close
-                  ? {
-                      day: period.close.day || 0,
-                      time: period.close.time || '0000',
-                    }
-                  : undefined,
-              })),
               weekdayText: place.opening_hours.weekday_text,
             }
           : undefined,
-        reviews: place.reviews?.slice(0, 5).map((review: any) => ({
-          authorName: review.author_name || 'Anonymous',
-          rating: review.rating || 0,
-          text: review.text || '',
-          time:
-            typeof review.time === 'number'
-              ? review.time
-              : parseInt(review.time) || 0,
-        })),
       };
     } catch (error) {
       //   console.error(`Error getting restaurant details for ${placeId}:`, error);

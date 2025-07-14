@@ -346,6 +346,7 @@ ${
   async checkAvailability(
     restaurant: Restaurant,
     dateTime: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     partySize: number
   ): Promise<{
     available: boolean;
@@ -455,9 +456,9 @@ ${
     }
 
     // Validate phone number format (basic check)
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    const phoneRegex = /^[+]?[1-9][\d]{0,15}$/;
     if (
-      !phoneRegex.test(request.contactInfo.phone.replace(/[\s\-\(\)]/g, ""))
+      !phoneRegex.test(request.contactInfo.phone.replace(/[\s-()]/g, ""))
     ) {
       return {
         isValid: false,

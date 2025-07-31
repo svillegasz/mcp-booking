@@ -57,163 +57,77 @@ class RestaurantBookingServer {
 
   private setupTools(server: McpServer) {
     // Search restaurants tool
-    server.tool(
+    server.registerTool(
       'search_restaurants',
-      'Search for restaurants based on location, cuisine, keyword, mood, event, radius, price level, and locale',
       {
-        latitude: z
-          .number()
-          .optional()
-          .describe(
-            `Latitude of the search location (default: ${DEFAULT_LATITUDE} - Taiwan)`
-          ),
-        longitude: z
-          .number()
-          .optional()
-          .describe(
-            `Longitude of the search location (default: ${DEFAULT_LONGITUDE} - Taiwan)`
-          ),
-        placeName: z
-          .string()
-          .optional()
-          .describe(
-            'Place name to search near (e.g., "New York", "Tokyo", "London"). Alternative to providing latitude/longitude coordinates.'
-          ),
-        cuisineTypes: z
-          .array(z.string())
-          .optional()
-          .describe(
-            'Array of preferred cuisine types (e.g., ["Italian", "Japanese", "Mexican"])'
-          ),
-        keyword: z
-          .string()
-          .optional()
-          .describe(
-            'Search for specific food types or dishes (e.g., "hotpot", "sushi", "pizza", "ramen", "dim sum", "barbecue")'
-          ),
-        mood: z
-          .string()
-          .describe(
-            'Desired mood/atmosphere (e.g., "romantic", "casual", "upscale", "fun", "quiet")'
-          ),
-        event: z
-          .string()
-          .describe(
-            "Type of event or occasion (e.g., 'dating', 'gathering', 'business', 'casual', 'celebration')"
-          ),
-        radius: z
-          .number()
-          .optional()
-          .describe(
-            `Search radius in meters (default: ${DEFAULT_SEARCH_RADIUS} = ${DEFAULT_SEARCH_RADIUS / 1000}km)`
-          ),
-        priceLevel: z
-          .number()
-          .min(1)
-          .max(4)
-          .optional()
-          .describe('Price level preference (1=inexpensive, 4=very expensive)'),
-        locale: z
-          .string()
-          .optional()
-          .describe(
-            'Locale for search results and Google API responses (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean, "th" for Thai). Affects restaurant names, reviews, and other text content.'
-          ),
+        title: 'Search for restaurants',
+        description:
+          'Search for restaurants based on location, cuisine, keyword, mood, event, radius, price level, and locale',
+        inputSchema: {
+          latitude: z
+            .number()
+            .optional()
+            .describe(
+              `Latitude of the search location (default: ${DEFAULT_LATITUDE} - Taiwan)`
+            ),
+          longitude: z
+            .number()
+            .optional()
+            .describe(
+              `Longitude of the search location (default: ${DEFAULT_LONGITUDE} - Taiwan)`
+            ),
+          placeName: z
+            .string()
+            .optional()
+            .describe(
+              'Place name to search near (e.g., "New York", "Tokyo", "London"). Alternative to providing latitude/longitude coordinates.'
+            ),
+          cuisineTypes: z
+            .array(z.string())
+            .optional()
+            .describe(
+              'Array of preferred cuisine types (e.g., ["Italian", "Japanese", "Mexican"])'
+            ),
+          keyword: z
+            .string()
+            .optional()
+            .describe(
+              'Search for specific food types or dishes (e.g., "hotpot", "sushi", "pizza", "ramen", "dim sum", "barbecue")'
+            ),
+          mood: z
+            .string()
+            .describe(
+              'Desired mood/atmosphere (e.g., "romantic", "casual", "upscale", "fun", "quiet")'
+            ),
+          event: z
+            .string()
+            .describe(
+              "Type of event or occasion (e.g., 'dating', 'gathering', 'business', 'casual', 'celebration')"
+            ),
+          radius: z
+            .number()
+            .optional()
+            .describe(
+              `Search radius in meters (default: ${DEFAULT_SEARCH_RADIUS} = ${DEFAULT_SEARCH_RADIUS / 1000}km)`
+            ),
+          priceLevel: z
+            .number()
+            .min(1)
+            .max(4)
+            .optional()
+            .describe(
+              'Price level preference (1=inexpensive, 4=very expensive)'
+            ),
+          locale: z
+            .string()
+            .optional()
+            .describe(
+              'Locale for search results and Google API responses (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean, "th" for Thai). Affects restaurant names, reviews, and other text content.'
+            ),
+        },
       },
-      async (args: any) => {
+      async args => {
         return await this.handleSearchRestaurants(args);
-      }
-    );
-
-    // Get restaurant details tool
-    server.tool(
-      'get_restaurant_details',
-      'Get details of a restaurant',
-      {
-        placeId: z.string().describe('Google Places ID of the restaurant'),
-        locale: z
-          .string()
-          .optional()
-          .describe(
-            'Locale for restaurant details (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean). Affects restaurant names, reviews, and other text content.'
-          ),
-      },
-      async (args: any) => {
-        return await this.handleGetRestaurantDetails(args);
-      }
-    );
-
-    // Get booking instructions tool
-    server.tool(
-      'get_booking_instructions',
-      'Get booking instructions for a restaurant',
-      {
-        placeId: z.string().describe('Google Places ID of the restaurant'),
-        locale: z
-          .string()
-          .optional()
-          .describe(
-            'Locale for booking instructions (e.g., "en", "zh-TW", "ja", "ko")'
-          ),
-      },
-      async (args: any) => {
-        return await this.handleGetBookingInstructions(args);
-      }
-    );
-
-    // Check availability tool
-    server.tool(
-      'check_availability',
-      'Check availability of a restaurant for a given date and time',
-      {
-        placeId: z.string().describe('Google Places ID of the restaurant'),
-        dateTime: z
-          .string()
-          .describe(
-            'Preferred date and time in ISO format (e.g., "2024-01-15T19:00:00")'
-          ),
-        partySize: z.number().describe('Number of people in the party'),
-        locale: z
-          .string()
-          .optional()
-          .describe(
-            'Locale for availability check (e.g., "en", "zh-TW", "ja", "ko")'
-          ),
-      },
-      async (args: any) => {
-        return await this.handleCheckAvailability(args);
-      }
-    );
-
-    // Make reservation tool
-    server.tool(
-      'make_reservation',
-      'Make a reservation for a restaurant',
-      {
-        placeId: z.string().describe('Google Places ID of the restaurant'),
-        partySize: z.number().describe('Number of people in the party'),
-        preferredDateTime: z
-          .string()
-          .describe('Preferred date and time in ISO format'),
-        contactName: z.string().describe('Name for the reservation'),
-        contactPhone: z.string().describe('Phone number for the reservation'),
-        contactEmail: z
-          .string()
-          .optional()
-          .describe('Email address (optional)'),
-        specialRequests: z
-          .string()
-          .optional()
-          .describe('Any special requests or dietary restrictions'),
-        locale: z
-          .string()
-          .optional()
-          .describe(
-            'Locale for reservation process (e.g., "en", "zh-TW", "ja", "ko")'
-          ),
-      },
-      async (args: any) => {
-        return await this.handleMakeReservation(args);
       }
     );
   }
@@ -273,8 +187,22 @@ class RestaurantBookingServer {
           cuisineTypes: rec.restaurant.cuisineTypes,
           phoneNumber: rec.restaurant.phoneNumber,
           website: rec.restaurant.website,
+          googleMapsUrl: rec.restaurant.googleMapsUrl,
           openingHours: rec.restaurant.openingHours,
-          photos: rec.restaurant.photos?.slice(0, 3), // Limit photos
+          distance: rec.restaurant.distance,
+          bookingInfo: rec.restaurant.bookingInfo,
+          reservable: rec.restaurant.reservable,
+          curbsidePickup: rec.restaurant.curbsidePickup,
+          delivery: rec.restaurant.delivery,
+          dineIn: rec.restaurant.dineIn,
+          takeout: rec.restaurant.takeout,
+          servesBreakfast: rec.restaurant.servesBreakfast,
+          servesLunch: rec.restaurant.servesLunch,
+          servesDinner: rec.restaurant.servesDinner,
+          servesBrunch: rec.restaurant.servesBrunch,
+          servesBeer: rec.restaurant.servesBeer,
+          servesWine: rec.restaurant.servesWine,
+          servesVegetarianFood: rec.restaurant.servesVegetarianFood,
         },
         score: Math.round(rec.score * 10) / 10,
         reasoning: rec.reasoning,
@@ -282,137 +210,6 @@ class RestaurantBookingServer {
         moodMatch: rec.moodMatch,
       })),
     };
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleGetRestaurantDetails(args: any) {
-    const restaurant = await this.googleMapsService.getRestaurantDetails(
-      args.placeId,
-      args.locale || 'en'
-    );
-
-    if (!restaurant) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: 'Restaurant not found or unable to retrieve details.',
-          },
-        ],
-      };
-    }
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(restaurant, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleGetBookingInstructions(args: any) {
-    const restaurant = await this.googleMapsService.getRestaurantDetails(
-      args.placeId,
-      args.locale || 'en'
-    );
-
-    if (!restaurant) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: 'Restaurant not found.',
-          },
-        ],
-      };
-    }
-
-    const instructions =
-      await this.bookingService.getBookingInstructions(restaurant);
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: instructions,
-        },
-      ],
-    };
-  }
-
-  private async handleCheckAvailability(args: any) {
-    const restaurant = await this.googleMapsService.getRestaurantDetails(
-      args.placeId,
-      args.locale || 'en'
-    );
-
-    if (!restaurant) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: 'Restaurant not found.',
-          },
-        ],
-      };
-    }
-
-    const availability = await this.bookingService.checkAvailability(
-      restaurant,
-      args.dateTime,
-      args.partySize
-    );
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(availability, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleMakeReservation(args: any) {
-    const restaurant = await this.googleMapsService.getRestaurantDetails(
-      args.placeId,
-      args.locale || 'en'
-    );
-
-    if (!restaurant) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: 'Restaurant not found.',
-          },
-        ],
-      };
-    }
-
-    const bookingRequest: BookingRequest = {
-      restaurant,
-      partySize: args.partySize,
-      preferredDateTime: args.preferredDateTime,
-      specialRequests: args.specialRequests,
-      contactInfo: {
-        name: args.contactName,
-        phone: args.contactPhone,
-        email: args.contactEmail,
-      },
-    };
-
-    const result = await this.bookingService.makeReservation(bookingRequest);
 
     return {
       content: [

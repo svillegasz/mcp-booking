@@ -454,9 +454,19 @@ export class GoogleMapsService {
     // Analyze website for booking platforms
     if (website) {
       const url = website.toLowerCase();
+      let hostname = '';
+      try {
+        hostname = new URL(website).hostname.toLowerCase();
+      } catch (e) {
+        // If website is not a valid URL, fallback to substring checks (optional)
+        hostname = '';
+      }
 
       // OpenTable detection
-      if (url.includes('opentable.com') || url.includes('opentable')) {
+      if (
+        hostname === 'opentable.com' ||
+        hostname.endsWith('.opentable.com')
+      ) {
         return {
           ...bookingInfo,
           reservable: true,
@@ -468,7 +478,10 @@ export class GoogleMapsService {
       }
 
       // Resy detection
-      if (url.includes('resy.com') || url.includes('resy')) {
+      if (
+        hostname === 'resy.com' ||
+        hostname.endsWith('.resy.com')
+      ) {
         return {
           ...bookingInfo,
           reservable: true,
@@ -481,7 +494,7 @@ export class GoogleMapsService {
 
       // Yelp reservations detection
       if (
-        url.includes('yelp.com') &&
+        (hostname === 'yelp.com' || hostname.endsWith('.yelp.com')) &&
         (url.includes('reservations') || url.includes('book'))
       ) {
         return {
@@ -496,8 +509,8 @@ export class GoogleMapsService {
 
       // Google Reserve detection
       if (
-        url.includes('reserve.google.com') ||
-        url.includes('google.com/reserve')
+        hostname === 'reserve.google.com' ||
+        (hostname === 'google.com' && url.includes('/reserve'))
       ) {
         return {
           ...bookingInfo,

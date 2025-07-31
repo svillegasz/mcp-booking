@@ -353,31 +353,50 @@ describe('GoogleMapsService', () => {
   });
 
   describe('Performance Monitoring', () => {
-    test('should track request times', async () => {
-      const mockClient = {
-        placeDetails: jest.fn().mockResolvedValue({
-          data: {
-            status: 'OK',
-            result: {
-              place_id: 'test-place',
-              name: 'Test Restaurant',
-              formatted_address: '123 Test St',
-              geometry: { location: { lat: 37.7749, lng: -122.4194 } },
-              rating: 4.5,
-              user_ratings_total: 100,
-              types: ['restaurant'],
-            },
-          },
-        }),
-      };
+    test('should track request times', () => {
+      const service = new GoogleMapsService('test-key');
+      
+      // Access private method for testing
+      (service as any).recordRequestTime(100);
+      (service as any).recordRequestTime(200);
+      (service as any).recordRequestTime(150);
+      
+      const metrics = service.getPerformanceMetrics();
+      expect(metrics.averageRequestTime).toBe(150);
+      expect(metrics.totalRequests).toBe(3);
+      expect(metrics.maxRequestTimeSamples).toBe(100); // Default value
+      expect(metrics.currentSampleCount).toBe(3);
+    });
 
-      (service as any).client = mockClient;
+    test('should respect custom maxRequestTimeSamples configuration', () => {
+      const service = new GoogleMapsService('test-key', {
+        maxRequestTimeSamples: 5
+      });
+      
+      // Add more samples than the configured limit
+      for (let i = 1; i <= 8; i++) {
+        (service as any).recordRequestTime(i * 10);
+      }
+      
+      const metrics = service.getPerformanceMetrics();
+      expect(metrics.maxRequestTimeSamples).toBe(5);
+      expect(metrics.currentSampleCount).toBe(5); // Should be limited to 5
+      expect(metrics.totalRequests).toBe(5); // Only keeps last 5 samples
+    });
 
-      await service.getRestaurantDetails('test-place');
-
-      // Check that request times are being tracked
-      const requestTimes = (service as any).requestTimes;
-      expect(Array.isArray(requestTimes)).toBe(true);
+    test('should respect custom cache and circuit breaker configuration', () => {
+      const service = new GoogleMapsService('test-key', {
+        cacheTimeout: 10000, // 10 seconds
+        circuitBreakerThreshold: 3,
+        maxRequestTimeSamples: 50
+      });
+      
+      const metrics = service.getPerformanceMetrics();
+      expect(metrics.maxRequestTimeSamples).toBe(50);
+      
+      // Verify internal configuration (access private properties for testing)
+      expect((service as any).cacheTimeout).toBe(10000);
+      expect((service as any).circuitBreakerThreshold).toBe(3);
     });
   });
 });

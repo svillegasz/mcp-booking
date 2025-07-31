@@ -21,8 +21,16 @@ export class GoogleMapsService {
   private failureCount: number = 0;
   private lastFailureTime: number = 0;
   private circuitBreakerThreshold: number = 5; // Max failures before circuit breaker
+  private maxRequestTimeSamples: number = 100; // Moving average window size for request times
 
-  constructor(apiKey: string) {
+  constructor(
+    apiKey: string,
+    options: {
+      cacheTimeout?: number; // Cache timeout in milliseconds (default: 5 minutes)
+      circuitBreakerThreshold?: number; // Max failures before circuit breaker (default: 5)
+      maxRequestTimeSamples?: number; // Moving average window size (default: 100)
+    } = {}
+  ) {
     // Create an HTTPS agent that ignores SSL certificate errors (only for local development)
     const httpsAgent = new https.Agent({
       rejectUnauthorized: false,
@@ -41,6 +49,11 @@ export class GoogleMapsService {
       axiosInstance: axiosInstance,
     });
     this.apiKey = apiKey;
+    
+    // Apply configuration options
+    this.cacheTimeout = options.cacheTimeout ?? this.cacheTimeout;
+    this.circuitBreakerThreshold = options.circuitBreakerThreshold ?? this.circuitBreakerThreshold;
+    this.maxRequestTimeSamples = options.maxRequestTimeSamples ?? this.maxRequestTimeSamples;
   }
 
   /**
@@ -102,10 +115,21 @@ export class GoogleMapsService {
   /**
    * Performance monitoring methods
    */
+  /**
+   * Record a request time for performance monitoring
+   * Uses a sliding window to limit memory usage while providing meaningful metrics
+   * 
+   * Design Decision: The moving average window size (default: 100) balances:
+   * - Memory usage: Larger windows consume more memory
+   * - Metric accuracy: Larger windows provide more stable averages
+   * - Responsiveness: Smaller windows react faster to performance changes
+   * 
+   * @param duration Request duration in milliseconds
+   */
   private recordRequestTime(duration: number): void {
     this.requestTimes.push(duration);
-    // Keep only last 100 requests for moving average
-    if (this.requestTimes.length > 100) {
+    // Maintain sliding window for moving average
+    if (this.requestTimes.length > this.maxRequestTimeSamples) {
       this.requestTimes.shift();
     }
   }
@@ -140,6 +164,8 @@ export class GoogleMapsService {
     totalRequests: number;
     cacheSize: number;
     circuitBreakerActive: boolean;
+    maxRequestTimeSamples: number;
+    currentSampleCount: number;
   } {
     return {
       averageRequestTime: this.getAverageRequestTime(),
@@ -147,6 +173,8 @@ export class GoogleMapsService {
       totalRequests: this.requestTimes.length,
       cacheSize: this.cache.size,
       circuitBreakerActive: this.shouldSkipRequest(),
+      maxRequestTimeSamples: this.maxRequestTimeSamples,
+      currentSampleCount: this.requestTimes.length,
     };
   }
 

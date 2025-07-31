@@ -67,9 +67,20 @@ export const getMemoryUsage = () => {
   };
 };
 
-// Enable garbage collection for memory leak tests
+/**
+ * Enable garbage collection for memory leak tests
+ * 
+ * The global.gc function is only available when Node.js is started with --expose-gc flag.
+ * In testing environments, we provide a no-op fallback to avoid runtime errors.
+ * 
+ * Note: @types/node defines gc as NodeJS.GCFunction which can return Promise<void>,
+ * but the actual implementation can be synchronous. We provide a compatible fallback.
+ */
 if (typeof global.gc === 'undefined') {
-  (global as any).gc = () => {
-    // No-op if gc is not available
-  };
+  // Type assertion is necessary here because we're providing a fallback implementation
+  // for the gc function when it's not exposed via --expose-gc flag
+  global.gc = (() => {
+    // No-op fallback when garbage collection is not exposed
+    // In CI/testing environments without --expose-gc flag
+  }) as NodeJS.GCFunction;
 }

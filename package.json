@@ -38,7 +38,7 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "form-data": "^4.0.4",
-    "zod": "^3.25.56"
+    "zod": "^4.0.14"
   },
   "devDependencies": {
     "@microsoft/eslint-formatter-sarif": "^3.1.0",

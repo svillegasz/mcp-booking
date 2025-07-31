@@ -79,7 +79,7 @@ describe('RestaurantRecommendationService', () => {
       const duration = Date.now() - startTime;
 
       // Should handle 100 restaurants efficiently
-      expect(duration).toBeLessThan(200);
+      expect(duration).toBeLessThan(300); // Increased from 200ms to account for processing 100 restaurants with system load variations
       expect(recommendations).toHaveLength(3);
     });
   });

@@ -7,20 +7,21 @@ import {
 export class RestaurantRecommendationService {
   /**
    * Analyze and score restaurants based on search criteria
+   * Optimized with parallel processing
    */
   async getRecommendations(
     restaurants: Restaurant[],
     params: RestaurantSearchParams
   ): Promise<RestaurantRecommendation[]> {
-    const recommendations: RestaurantRecommendation[] = [];
+    // Process all restaurants in parallel for better performance
+    const recommendationPromises = restaurants.map(async (restaurant) => {
+      const [score, suitabilityForEvent, moodMatch] = await Promise.all([
+        // These can run in parallel since they're independent calculations
+        Promise.resolve(this.calculateRestaurantScore(restaurant, params)),
+        Promise.resolve(this.calculateEventSuitability(restaurant, params.event)),
+        Promise.resolve(this.calculateMoodMatch(restaurant, params.mood)),
+      ]);
 
-    for (const restaurant of restaurants) {
-      const score = this.calculateRestaurantScore(restaurant, params);
-      const suitabilityForEvent = this.calculateEventSuitability(
-        restaurant,
-        params.event
-      );
-      const moodMatch = this.calculateMoodMatch(restaurant, params.mood);
       const reasoning = this.generateReasoning(
         restaurant,
         params,
@@ -29,14 +30,16 @@ export class RestaurantRecommendationService {
         moodMatch
       );
 
-      recommendations.push({
+      return {
         restaurant,
         score,
         reasoning,
         suitabilityForEvent,
         moodMatch,
-      });
-    }
+      };
+    });
+
+    const recommendations = await Promise.all(recommendationPromises);
 
     // Sort by score (highest first) and return top 3
     return recommendations.sort((a, b) => b.score - a.score).slice(0, 3);

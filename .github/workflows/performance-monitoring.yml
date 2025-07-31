@@ -84,6 +84,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
+    - name: Build project
+      run: npm run build
+      
     - name: Run memory usage tests
       run: |
         echo "🧠 Running Memory Usage Analysis..."

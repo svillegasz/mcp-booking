@@ -210,7 +210,7 @@ export class GoogleMapsService {
         try {
           const result = await promises[currentIndex]();
           results[currentIndex] = result; // Maintain order
-        } catch (error) {
+        } catch (_error) {
           results[currentIndex] = null as T; // Handle errors gracefully
         }
       }
@@ -666,7 +666,7 @@ export class GoogleMapsService {
             }
           : undefined,
       };
-    } catch (error) {
+    } catch (_error) {
       //   console.error(`Error getting restaurant details for ${placeId}:`, error);
       this.recordFailure();
       return null;
@@ -722,7 +722,7 @@ export class GoogleMapsService {
       let hostname = '';
       try {
         hostname = new URL(website).hostname.toLowerCase();
-      } catch (e) {
+      } catch (_e) {
         // If website is not a valid URL, fallback to substring checks (optional)
         hostname = '';
       }

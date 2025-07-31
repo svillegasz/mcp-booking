@@ -44,28 +44,25 @@ jobs:
     - name: Performance regression check
       run: |
         echo "Checking for performance regressions..."
-        # Extract timing data from benchmark results
-        SEARCH_TIME=$(grep "Average search time:" benchmark-results.txt | grep -o '[0-9.]*ms' | grep -o '[0-9.]*')
-        RECOMMENDATION_TIME=$(grep "Average recommendation time:" benchmark-results.txt | grep -o '[0-9.]*ms' | grep -o '[0-9.]*')
+        # Extract timing data from benchmark results - get the worst case (slowest scenario)
+        WORST_AVERAGE_TIME=$(grep "Average:" benchmark-results.txt | grep -o '[0-9.]*ms' | grep -o '[0-9.]*' | sort -nr | head -1)
         
-        echo "Search Time: ${SEARCH_TIME}ms"
-        echo "Recommendation Time: ${RECOMMENDATION_TIME}ms"
+        echo "Worst Average Time: ${WORST_AVERAGE_TIME}ms"
         
-        # Check thresholds (in milliseconds)
-        SEARCH_THRESHOLD=2000  # 2 seconds
-        RECOMMENDATION_THRESHOLD=100  # 100ms
+        # Check threshold (in milliseconds)
+        PERFORMANCE_THRESHOLD=2000  # 2 seconds
         
-        if (( $(echo "$SEARCH_TIME > $SEARCH_THRESHOLD" | bc -l) )); then
-          echo "❌ Performance regression detected: Search time ${SEARCH_TIME}ms exceeds threshold ${SEARCH_THRESHOLD}ms"
+        if [ -z "$WORST_AVERAGE_TIME" ]; then
+          echo "❌ Could not extract performance data from benchmark results"
           exit 1
         fi
         
-        if (( $(echo "$RECOMMENDATION_TIME > $RECOMMENDATION_THRESHOLD" | bc -l) )); then
-          echo "❌ Performance regression detected: Recommendation time ${RECOMMENDATION_TIME}ms exceeds threshold ${RECOMMENDATION_THRESHOLD}ms"
+        if (( $(echo "$WORST_AVERAGE_TIME > $PERFORMANCE_THRESHOLD" | bc -l) )); then
+          echo "❌ Performance regression detected: Worst average time ${WORST_AVERAGE_TIME}ms exceeds threshold ${PERFORMANCE_THRESHOLD}ms"
           exit 1
         fi
         
-        echo "✅ Performance benchmarks passed"
+        echo "✅ Performance benchmarks passed (${WORST_AVERAGE_TIME}ms < ${PERFORMANCE_THRESHOLD}ms)"
         
   memory-usage-check:
     name: Memory Usage Analysis

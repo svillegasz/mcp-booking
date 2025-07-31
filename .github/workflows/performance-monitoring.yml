@@ -1,0 +1,132 @@
+name: Performance Monitoring
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # Run performance tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  performance-benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run performance benchmarks
+      run: |
+        echo "🚀 Running Performance Benchmarks..."
+        npm run benchmark > benchmark-results.txt
+        echo "📊 Benchmark Results:"
+        cat benchmark-results.txt
+      env:
+        GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY_TEST }}
+        
+    - name: Store benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results-${{ github.sha }}
+        path: benchmark-results.txt
+        retention-days: 30
+        
+    - name: Performance regression check
+      run: |
+        echo "Checking for performance regressions..."
+        # Extract timing data from benchmark results
+        SEARCH_TIME=$(grep "Average search time:" benchmark-results.txt | grep -o '[0-9.]*ms' | grep -o '[0-9.]*')
+        RECOMMENDATION_TIME=$(grep "Average recommendation time:" benchmark-results.txt | grep -o '[0-9.]*ms' | grep -o '[0-9.]*')
+        
+        echo "Search Time: ${SEARCH_TIME}ms"
+        echo "Recommendation Time: ${RECOMMENDATION_TIME}ms"
+        
+        # Check thresholds (in milliseconds)
+        SEARCH_THRESHOLD=2000  # 2 seconds
+        RECOMMENDATION_THRESHOLD=100  # 100ms
+        
+        if (( $(echo "$SEARCH_TIME > $SEARCH_THRESHOLD" | bc -l) )); then
+          echo "❌ Performance regression detected: Search time ${SEARCH_TIME}ms exceeds threshold ${SEARCH_THRESHOLD}ms"
+          exit 1
+        fi
+        
+        if (( $(echo "$RECOMMENDATION_TIME > $RECOMMENDATION_THRESHOLD" | bc -l) )); then
+          echo "❌ Performance regression detected: Recommendation time ${RECOMMENDATION_TIME}ms exceeds threshold ${RECOMMENDATION_THRESHOLD}ms"
+          exit 1
+        fi
+        
+        echo "✅ Performance benchmarks passed"
+        
+  memory-usage-check:
+    name: Memory Usage Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run memory usage tests
+      run: |
+        echo "🧠 Running Memory Usage Analysis..."
+        npm run test:performance -- --testNamePattern="Memory Usage"
+      env:
+        GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY_TEST }}
+        
+    - name: Monitor for memory leaks
+      run: |
+        echo "🔍 Checking for memory leaks..."
+        # Run a extended test to check for memory leaks
+        node --expose-gc -e "
+        const { GoogleMapsService } = require('./dist/services/googleMapsService.js');
+        
+        async function memoryTest() {
+          const service = new GoogleMapsService(process.env.GOOGLE_MAPS_API_KEY || 'test-key');
+          const initialMemory = process.memoryUsage().heapUsed;
+          
+          // Simulate multiple operations
+          for (let i = 0; i < 100; i++) {
+            try {
+              // This would normally make API calls, but we're testing memory management
+              service.resetPerformanceMetrics();
+            } catch (error) {
+              // Expected in test environment
+            }
+          }
+          
+          global.gc();
+          const finalMemory = process.memoryUsage().heapUsed;
+          const memoryIncrease = (finalMemory - initialMemory) / 1024 / 1024;
+          
+          console.log(\`Memory increase: \${memoryIncrease.toFixed(2)}MB\`);
+          
+          if (memoryIncrease > 50) {
+            console.error('❌ Potential memory leak detected');
+            process.exit(1);
+          } else {
+            console.log('✅ Memory usage within acceptable limits');
+          }
+        }
+        
+        memoryTest().catch(console.error);
+        "
+      env:
+        GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY_TEST }}

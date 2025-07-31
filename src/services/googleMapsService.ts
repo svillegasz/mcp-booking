@@ -367,7 +367,9 @@ export class GoogleMapsService {
       // Log performance metrics periodically
       if (this.requestTimes.length % 10 === 0 && this.requestTimes.length > 0) {
         const metrics = this.getPerformanceMetrics();
-        console.log(`📊 GoogleMapsService Performance: ${JSON.stringify(metrics)}`);
+        console.log(
+          `📊 GoogleMapsService Performance: ${JSON.stringify(metrics)}`
+        );
       }
 
       return restaurants;
@@ -391,11 +393,13 @@ export class GoogleMapsService {
   ): Promise<Location> {
     // Check circuit breaker
     if (this.shouldSkipRequest()) {
-      throw new Error('Circuit breaker activated - geocoding temporarily unavailable');
+      throw new Error(
+        'Circuit breaker activated - geocoding temporarily unavailable'
+      );
     }
 
     const startTime = Date.now();
-    
+
     try {
       const response = await this.client.geocode({
         params: {
@@ -468,9 +472,14 @@ export class GoogleMapsService {
     }
 
     const startTime = Date.now();
-    
+
     // Create the actual request promise
-    requestPromise = this.executeRestaurantDetailsRequest(placeId, locale, includeExtendedFields, startTime);
+    requestPromise = this.executeRestaurantDetailsRequest(
+      placeId,
+      locale,
+      includeExtendedFields,
+      startTime
+    );
     this.pendingRequests.set(requestKey, requestPromise);
 
     // Clean up pending request when done
@@ -479,7 +488,7 @@ export class GoogleMapsService {
     });
 
     const result = await requestPromise;
-    
+
     // Cache the result
     if (result) {
       this.setCachedData(cacheKey, result);

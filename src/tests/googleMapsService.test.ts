@@ -24,13 +24,13 @@ describe('GoogleMapsService', () => {
             geometry: { location: { lat: 37.7749, lng: -122.4194 } },
             rating: 4.5,
             user_ratings_total: 100,
-            types: ['restaurant']
-          }
-        }
+            types: ['restaurant'],
+          },
+        },
       };
 
       const mockClient = {
-        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse)
+        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse),
       };
 
       (service as any).client = mockClient;
@@ -42,7 +42,7 @@ describe('GoogleMapsService', () => {
       // Second call - should use cache
       const result2 = await service.getRestaurantDetails('test-place');
       expect(mockClient.placeDetails).toHaveBeenCalledTimes(1); // Still only 1 call
-      
+
       expect(result1).toEqual(result2);
     });
 
@@ -57,13 +57,13 @@ describe('GoogleMapsService', () => {
             geometry: { location: { lat: 37.7749, lng: -122.4194 } },
             rating: 4.5,
             user_ratings_total: 100,
-            types: ['restaurant']
-          }
-        }
+            types: ['restaurant'],
+          },
+        },
       };
 
       const mockClient = {
-        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse)
+        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse),
       };
 
       (service as any).client = mockClient;
@@ -85,7 +85,7 @@ describe('GoogleMapsService', () => {
   });
 
   describe('Concurrency Control', () => {
-    test('should limit concurrent requests', async () => { 
+    test('should limit concurrent requests', async () => {
       const mockClient = {
         placeDetails: jest.fn().mockImplementation(({ params }) => {
           return new Promise(resolve => {
@@ -100,13 +100,13 @@ describe('GoogleMapsService', () => {
                     geometry: { location: { lat: 37.7749, lng: -122.4194 } },
                     rating: 4.5,
                     user_ratings_total: 100,
-                    types: ['restaurant']
-                  }
-                }
+                    types: ['restaurant'],
+                  },
+                },
               });
             }, 100); // 100ms delay
           });
-        })
+        }),
       };
 
       (service as any).client = mockClient;
@@ -141,27 +141,27 @@ describe('GoogleMapsService', () => {
             {
               place_id: 'near_place',
               name: 'Near Restaurant',
-              geometry: { 
-                location: { 
+              geometry: {
+                location: {
                   lat: 37.7749, // Same as search location
-                  lng: -122.4194 
-                } 
+                  lng: -122.4194,
+                },
               },
-              types: ['restaurant']
+              types: ['restaurant'],
             },
             {
               place_id: 'far_place',
               name: 'Far Restaurant',
-              geometry: { 
-                location: { 
+              geometry: {
+                location: {
                   lat: 37.8749, // ~11km away
-                  lng: -122.4194 
-                } 
+                  lng: -122.4194,
+                },
               },
-              types: ['restaurant']
-            }
-          ]
-        }
+              types: ['restaurant'],
+            },
+          ],
+        },
       };
 
       const mockDetailsResponse = (placeId: string) => ({
@@ -171,23 +171,26 @@ describe('GoogleMapsService', () => {
             place_id: placeId,
             name: `Restaurant ${placeId}`,
             formatted_address: '123 Test St',
-            geometry: { 
-              location: placeId === 'near_place' 
-                ? { lat: 37.7749, lng: -122.4194 }
-                : { lat: 37.8749, lng: -122.4194 }
+            geometry: {
+              location:
+                placeId === 'near_place'
+                  ? { lat: 37.7749, lng: -122.4194 }
+                  : { lat: 37.8749, lng: -122.4194 },
             },
             rating: 4.5,
             user_ratings_total: 100,
-            types: ['restaurant']
-          }
-        }
+            types: ['restaurant'],
+          },
+        },
       });
 
       const mockClient = {
         placesNearby: jest.fn().mockResolvedValue(mockPlacesResponse),
-        placeDetails: jest.fn().mockImplementation(({ params }) => 
-          Promise.resolve(mockDetailsResponse(params.place_id))
-        )
+        placeDetails: jest
+          .fn()
+          .mockImplementation(({ params }) =>
+            Promise.resolve(mockDetailsResponse(params.place_id))
+          ),
       };
 
       (service as any).client = mockClient;
@@ -197,7 +200,7 @@ describe('GoogleMapsService', () => {
         cuisineTypes: [],
         mood: '',
         event: '',
-        radius: 5000 // 5km radius
+        radius: 5000, // 5km radius
       };
 
       const results = await service.searchRestaurants(searchParams);
@@ -205,7 +208,7 @@ describe('GoogleMapsService', () => {
       // Only the near restaurant should be returned
       expect(results).toHaveLength(1);
       expect(results[0].placeId).toBe('near_place');
-      
+
       // Should only call placeDetails for the near restaurant due to pre-filtering
       expect(mockClient.placeDetails).toHaveBeenCalledTimes(1);
     });
@@ -227,26 +230,26 @@ describe('GoogleMapsService', () => {
                 geometry: { location: { lat: 37.7749, lng: -122.4194 } },
                 rating: 4.5,
                 user_ratings_total: 100,
-                types: ['restaurant']
-              }
-            }
+                types: ['restaurant'],
+              },
+            },
           });
-        })
+        }),
       };
 
       (service as any).client = mockClient;
 
       // Make 5 simultaneous requests for the same place
-      const promises = Array(5).fill(null).map(() => 
-        service.getRestaurantDetails('duplicate-place')
-      );
+      const promises = Array(5)
+        .fill(null)
+        .map(() => service.getRestaurantDetails('duplicate-place'));
 
       const results = await Promise.all(promises);
 
       // Should only make one actual API call due to deduplication
       expect(callCount).toBe(1);
       expect(mockClient.placeDetails).toHaveBeenCalledTimes(1);
-      
+
       // All results should be identical
       results.forEach(result => {
         expect(result?.placeId).toBe('duplicate-place');
@@ -257,7 +260,7 @@ describe('GoogleMapsService', () => {
   describe('Error Handling', () => {
     test('should handle API errors gracefully', async () => {
       const mockClient = {
-        placeDetails: jest.fn().mockRejectedValue(new Error('API Error'))
+        placeDetails: jest.fn().mockRejectedValue(new Error('API Error')),
       };
 
       (service as any).client = mockClient;
@@ -271,9 +274,9 @@ describe('GoogleMapsService', () => {
         placeDetails: jest.fn().mockResolvedValue({
           data: {
             status: 'NOT_FOUND',
-            result: null
-          }
-        })
+            result: null,
+          },
+        }),
       };
 
       (service as any).client = mockClient;
@@ -296,10 +299,10 @@ describe('GoogleMapsService', () => {
               geometry: { location: { lat: 37.7749, lng: -122.4194 } },
               rating: 4.5,
               user_ratings_total: 100,
-              types: ['restaurant']
-            }
-          }
-        })
+              types: ['restaurant'],
+            },
+          },
+        }),
       };
 
       (service as any).client = mockClient;
@@ -330,10 +333,10 @@ describe('GoogleMapsService', () => {
               user_ratings_total: 100,
               types: ['restaurant'],
               reviews: [],
-              opening_hours: { weekday_text: [] }
-            }
-          }
-        })
+              opening_hours: { weekday_text: [] },
+            },
+          },
+        }),
       };
 
       (service as any).client = mockClient;
@@ -362,10 +365,10 @@ describe('GoogleMapsService', () => {
               geometry: { location: { lat: 37.7749, lng: -122.4194 } },
               rating: 4.5,
               user_ratings_total: 100,
-              types: ['restaurant']
-            }
-          }
-        })
+              types: ['restaurant'],
+            },
+          },
+        }),
       };
 
       (service as any).client = mockClient;

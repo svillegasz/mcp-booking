@@ -18,7 +18,7 @@ describe('Performance Tests', () => {
     mood: 'romantic',
     event: 'dating',
     radius: 2000,
-    locale: 'en'
+    locale: 'en',
   };
 
   beforeEach(() => {
@@ -40,14 +40,14 @@ describe('Performance Tests', () => {
             geometry: {
               location: {
                 lat: 37.7749 + (Math.random() - 0.5) * 0.01,
-                lng: -122.4194 + (Math.random() - 0.5) * 0.01
-              }
+                lng: -122.4194 + (Math.random() - 0.5) * 0.01,
+              },
             },
             rating: 4.0 + Math.random(),
             user_ratings_total: Math.floor(Math.random() * 1000),
-            types: ['restaurant', 'food', 'establishment']
-          }))
-        }
+            types: ['restaurant', 'food', 'establishment'],
+          })),
+        },
       };
 
       const mockDetailsResponse = {
@@ -58,7 +58,7 @@ describe('Performance Tests', () => {
             name: 'Test Restaurant',
             formatted_address: '123 Test St, San Francisco, CA',
             geometry: {
-              location: { lat: 37.7749, lng: -122.4194 }
+              location: { lat: 37.7749, lng: -122.4194 },
             },
             rating: 4.5,
             user_ratings_total: 250,
@@ -66,21 +66,22 @@ describe('Performance Tests', () => {
             types: ['restaurant', 'italian_restaurant'],
             formatted_phone_number: '+1 555-123-4567',
             website: 'https://testrestaurant.com',
-            opening_hours: { open_now: true }
-          }
-        }
+            opening_hours: { open_now: true },
+          },
+        },
       };
 
       // Mock the client methods
       const mockClient = {
         placesNearby: jest.fn().mockResolvedValue(mockPlacesResponse),
-        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse)
+        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse),
       };
 
       (googleMapsService as any).client = mockClient;
 
       const startTime = Date.now();
-      const results = await googleMapsService.searchRestaurants(mockSearchParams);
+      const results =
+        await googleMapsService.searchRestaurants(mockSearchParams);
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(2000); // Should complete within 2 seconds
@@ -99,10 +100,10 @@ describe('Performance Tests', () => {
               name: 'Test Restaurant 1',
               geometry: { location: { lat: 37.7749, lng: -122.4194 } },
               rating: 4.5,
-              types: ['restaurant']
-            }
-          ]
-        }
+              types: ['restaurant'],
+            },
+          ],
+        },
       };
 
       const mockDetailsResponse = {
@@ -115,22 +116,22 @@ describe('Performance Tests', () => {
             geometry: { location: { lat: 37.7749, lng: -122.4194 } },
             rating: 4.5,
             user_ratings_total: 100,
-            types: ['restaurant']
-          }
-        }
+            types: ['restaurant'],
+          },
+        },
       };
 
       const mockClient = {
         placesNearby: jest.fn().mockResolvedValue(mockResponse),
-        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse)
+        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse),
       };
 
       (googleMapsService as any).client = mockClient;
 
       // Make 5 concurrent requests
-      const concurrentRequests = Array(5).fill(null).map(() =>
-        googleMapsService.searchRestaurants(mockSearchParams)
-      );
+      const concurrentRequests = Array(5)
+        .fill(null)
+        .map(() => googleMapsService.searchRestaurants(mockSearchParams));
 
       const startTime = Date.now();
       const results = await Promise.all(concurrentRequests);
@@ -153,10 +154,10 @@ describe('Performance Tests', () => {
               name: 'Cached Restaurant',
               geometry: { location: { lat: 37.7749, lng: -122.4194 } },
               rating: 4.5,
-              types: ['restaurant']
-            }
-          ]
-        }
+              types: ['restaurant'],
+            },
+          ],
+        },
       };
 
       const mockDetailsResponse = {
@@ -169,14 +170,14 @@ describe('Performance Tests', () => {
             geometry: { location: { lat: 37.7749, lng: -122.4194 } },
             rating: 4.5,
             user_ratings_total: 150,
-            types: ['restaurant']
-          }
-        }
+            types: ['restaurant'],
+          },
+        },
       };
 
       const mockClient = {
         placesNearby: jest.fn().mockResolvedValue(mockResponse),
-        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse)
+        placeDetails: jest.fn().mockResolvedValue(mockDetailsResponse),
       };
 
       (googleMapsService as any).client = mockClient;
@@ -187,7 +188,8 @@ describe('Performance Tests', () => {
 
       // Second request - should use cache
       const startTime = Date.now();
-      const cachedResults = await googleMapsService.searchRestaurants(mockSearchParams);
+      const cachedResults =
+        await googleMapsService.searchRestaurants(mockSearchParams);
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(100); // Cached request should be very fast
@@ -199,17 +201,20 @@ describe('Performance Tests', () => {
 
   describe('RestaurantRecommendationService Performance', () => {
     test('should process recommendations in parallel', async () => {
-      const mockRestaurants: Restaurant[] = Array.from({ length: 20 }, (_, i) => ({
-        placeId: `place_${i}`,
-        name: `Restaurant ${i}`,
-        address: `${i} Test Street`,
-        location: { latitude: 37.7749, longitude: -122.4194 },
-        rating: 4.0 + Math.random(),
-        userRatingsTotal: Math.floor(Math.random() * 1000),
-        priceLevel: Math.floor(Math.random() * 4) + 1,
-        cuisineTypes: ['Italian'],
-        googleMapsUrl: `https://maps.google.com/place_${i}`
-      }));
+      const mockRestaurants: Restaurant[] = Array.from(
+        { length: 20 },
+        (_, i) => ({
+          placeId: `place_${i}`,
+          name: `Restaurant ${i}`,
+          address: `${i} Test Street`,
+          location: { latitude: 37.7749, longitude: -122.4194 },
+          rating: 4.0 + Math.random(),
+          userRatingsTotal: Math.floor(Math.random() * 1000),
+          priceLevel: Math.floor(Math.random() * 4) + 1,
+          cuisineTypes: ['Italian'],
+          googleMapsUrl: `https://maps.google.com/place_${i}`,
+        })
+      );
 
       const startTime = Date.now();
       const recommendations = await recommendationService.getRecommendations(
@@ -220,8 +225,12 @@ describe('Performance Tests', () => {
 
       expect(duration).toBeLessThan(500); // Should process 20 restaurants within 500ms
       expect(recommendations).toHaveLength(3); // Should return top 3
-      expect(recommendations[0].score).toBeGreaterThanOrEqual(recommendations[1].score);
-      expect(recommendations[1].score).toBeGreaterThanOrEqual(recommendations[2].score);
+      expect(recommendations[0].score).toBeGreaterThanOrEqual(
+        recommendations[1].score
+      );
+      expect(recommendations[1].score).toBeGreaterThanOrEqual(
+        recommendations[2].score
+      );
     });
   });
 
@@ -241,18 +250,20 @@ describe('Performance Tests', () => {
           reservable: true,
           supportsOnlineBooking: true,
           bookingUrl: 'https://opentable.com/test',
-          bookingPlatform: 'opentable'
-        }
+          bookingPlatform: 'opentable',
+        },
       };
 
       const bookingRequest = {
         restaurant: mockRestaurant,
         partySize: 4,
-        preferredDateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        preferredDateTime: new Date(
+          Date.now() + 24 * 60 * 60 * 1000
+        ).toISOString(),
         contactInfo: {
           name: 'John Doe',
-          phone: '+1 555-987-6543'
-        }
+          phone: '+1 555-987-6543',
+        },
       };
 
       const startTime = Date.now();
@@ -277,14 +288,14 @@ describe('Performance Tests', () => {
             geometry: {
               location: {
                 lat: 37.7749 + (Math.random() - 0.5) * 0.005,
-                lng: -122.4194 + (Math.random() - 0.5) * 0.005
-              }
+                lng: -122.4194 + (Math.random() - 0.5) * 0.005,
+              },
             },
             rating: 4.0 + Math.random(),
             user_ratings_total: Math.floor(Math.random() * 500) + 50,
-            types: ['restaurant', 'food', 'establishment']
-          }))
-        }
+            types: ['restaurant', 'food', 'establishment'],
+          })),
+        },
       };
 
       const mockDetailsResponse = (placeId: string) => ({
@@ -295,10 +306,10 @@ describe('Performance Tests', () => {
             name: `Restaurant ${placeId.split('_')[1]}`,
             formatted_address: `${placeId.split('_')[1]} Test St, San Francisco, CA`,
             geometry: {
-              location: { 
+              location: {
                 lat: 37.7749 + (Math.random() - 0.5) * 0.005,
-                lng: -122.4194 + (Math.random() - 0.5) * 0.005
-              }
+                lng: -122.4194 + (Math.random() - 0.5) * 0.005,
+              },
             },
             rating: 4.0 + Math.random(),
             user_ratings_total: Math.floor(Math.random() * 500) + 50,
@@ -306,35 +317,38 @@ describe('Performance Tests', () => {
             types: ['restaurant', 'italian_restaurant'],
             formatted_phone_number: '+1 555-123-4567',
             website: 'https://testrestaurant.com',
-            opening_hours: { open_now: true }
-          }
-        }
+            opening_hours: { open_now: true },
+          },
+        },
       });
 
       const mockClient = {
         placesNearby: jest.fn().mockResolvedValue(mockPlacesResponse),
-        placeDetails: jest.fn().mockImplementation(({ params }) => 
-          Promise.resolve(mockDetailsResponse(params.place_id))
-        )
+        placeDetails: jest
+          .fn()
+          .mockImplementation(({ params }) =>
+            Promise.resolve(mockDetailsResponse(params.place_id))
+          ),
       };
 
       (googleMapsService as any).client = mockClient;
 
       const startTime = Date.now();
-      
+
       // Execute full flow
-      const restaurants = await googleMapsService.searchRestaurants(mockSearchParams);
+      const restaurants =
+        await googleMapsService.searchRestaurants(mockSearchParams);
       const recommendations = await recommendationService.getRecommendations(
-        restaurants, 
+        restaurants,
         mockSearchParams
       );
-      
+
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(3000); // Complete flow within 3 seconds
       expect(restaurants.length).toBeGreaterThan(0);
       expect(recommendations).toHaveLength(3);
-      
+
       // Verify concurrency was used effectively
       expect(mockClient.placesNearby).toHaveBeenCalledTimes(1);
       expect(mockClient.placeDetails).toHaveBeenCalledTimes(10);
@@ -344,24 +358,27 @@ describe('Performance Tests', () => {
   describe('Memory Usage Tests', () => {
     test('should not leak memory with large datasets', async () => {
       const initialMemory = process.memoryUsage().heapUsed;
-      
+
       // Process a large number of restaurants
-      const largeRestaurantSet: Restaurant[] = Array.from({ length: 100 }, (_, i) => ({
-        placeId: `place_${i}`,
-        name: `Restaurant ${i}`,
-        address: `${i} Memory Test Street`,
-        location: { latitude: 37.7749, longitude: -122.4194 },
-        rating: 4.0 + Math.random(),
-        userRatingsTotal: Math.floor(Math.random() * 1000),
-        priceLevel: Math.floor(Math.random() * 4) + 1,
-        cuisineTypes: ['Italian', 'American'],
-        reviews: Array.from({ length: 5 }, (_, j) => ({
-          authorName: `Reviewer ${j}`,
-          rating: Math.floor(Math.random() * 5) + 1,
-          text: `This is a review with lots of text to simulate memory usage. Review number ${j} for restaurant ${i}.`,
-          time: Date.now()
-        }))
-      }));
+      const largeRestaurantSet: Restaurant[] = Array.from(
+        { length: 100 },
+        (_, i) => ({
+          placeId: `place_${i}`,
+          name: `Restaurant ${i}`,
+          address: `${i} Memory Test Street`,
+          location: { latitude: 37.7749, longitude: -122.4194 },
+          rating: 4.0 + Math.random(),
+          userRatingsTotal: Math.floor(Math.random() * 1000),
+          priceLevel: Math.floor(Math.random() * 4) + 1,
+          cuisineTypes: ['Italian', 'American'],
+          reviews: Array.from({ length: 5 }, (_, j) => ({
+            authorName: `Reviewer ${j}`,
+            rating: Math.floor(Math.random() * 5) + 1,
+            text: `This is a review with lots of text to simulate memory usage. Review number ${j} for restaurant ${i}.`,
+            time: Date.now(),
+          })),
+        })
+      );
 
       // Process multiple times to test for memory leaks
       for (let i = 0; i < 10; i++) {
@@ -378,7 +395,7 @@ describe('Performance Tests', () => {
 
       const finalMemory = process.memoryUsage().heapUsed;
       const memoryIncrease = finalMemory - initialMemory;
-      
+
       // Memory increase should be reasonable (less than 50MB for this test)
       expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024);
     });
@@ -395,18 +412,19 @@ describe('Performance Tests', () => {
                 place_id: 'failing-place',
                 name: 'Failing Restaurant',
                 geometry: { location: { lat: 37.7749, lng: -122.4194 } },
-                types: ['restaurant']
-              }
-            ]
-          }
+                types: ['restaurant'],
+              },
+            ],
+          },
         }),
-        placeDetails: jest.fn().mockRejectedValue(new Error('API Error'))
+        placeDetails: jest.fn().mockRejectedValue(new Error('API Error')),
       };
 
       (googleMapsService as any).client = mockClient;
 
       const startTime = Date.now();
-      const results = await googleMapsService.searchRestaurants(mockSearchParams);
+      const results =
+        await googleMapsService.searchRestaurants(mockSearchParams);
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(1000); // Should fail fast

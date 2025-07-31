@@ -24,7 +24,7 @@ afterEach(() => {
   // Restore console functions
   console.error = originalConsoleError;
   console.warn = originalConsoleWarn;
-  
+
   // Clear all mocks after each test
   jest.clearAllMocks();
 });
@@ -32,7 +32,7 @@ afterEach(() => {
 // Export utilities instead of adding to global
 export const createMockLocation = (lat = 37.7749, lng = -122.4194) => ({
   latitude: lat,
-  longitude: lng
+  longitude: lng,
 });
 
 export const createMockRestaurant = (overrides: any = {}) => ({
@@ -45,7 +45,7 @@ export const createMockRestaurant = (overrides: any = {}) => ({
   priceLevel: 2,
   cuisineTypes: ['Italian'],
   googleMapsUrl: 'https://maps.google.com/test',
-  ...overrides
+  ...overrides,
 });
 
 // Performance monitoring helpers
@@ -63,7 +63,7 @@ export const getMemoryUsage = () => {
     heapUsed: Math.round(usage.heapUsed / 1024 / 1024), // MB
     heapTotal: Math.round(usage.heapTotal / 1024 / 1024), // MB
     external: Math.round(usage.external / 1024 / 1024), // MB
-    rss: Math.round(usage.rss / 1024 / 1024) // MB
+    rss: Math.round(usage.rss / 1024 / 1024), // MB
   };
 };
 

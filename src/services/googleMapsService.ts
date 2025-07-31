@@ -278,24 +278,29 @@ export class GoogleMapsService {
       const results = response.data.results || [];
 
       // Pre-filter by distance using Google's location data before API calls
-      const preFilteredResults = results
-        .map(place => {
-          if (!place.geometry?.location) return null;
+      // Filter first to avoid unnecessary object creation for out-of-range places
+      const placesWithDistance: Array<{ place: any; distance: number }> = [];
+      
+      for (const place of results) {
+        if (!place.geometry?.location) continue;
 
-          const distance = this.calculateDistance(
-            searchLocation.latitude,
-            searchLocation.longitude,
-            place.geometry.location.lat,
-            place.geometry.location.lng
-          );
+        const distance = this.calculateDistance(
+          searchLocation.latitude,
+          searchLocation.longitude,
+          place.geometry.location.lat,
+          place.geometry.location.lng
+        );
 
-          return distance <= radius
-            ? { ...place, preliminaryDistance: distance }
-            : null;
-        })
-        .filter((place): place is NonNullable<typeof place> => place !== null)
-        .sort((a, b) => a.preliminaryDistance - b.preliminaryDistance)
-        .slice(0, 15); // Reduced from 20 to 15 for better performance
+        if (distance <= radius) {
+          placesWithDistance.push({ place, distance });
+        }
+      }
+
+      // Sort by distance and limit results
+      const preFilteredResults = placesWithDistance
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 15) // Reduced from 20 to 15 for better performance
+        .map(({ place, distance }) => ({ ...place, preliminaryDistance: distance }));
 
       // 🚀 PERFORMANCE OPTIMIZATION: Use controlled concurrency for API calls
       const restaurantPromises = preFilteredResults.map(place => async () => {

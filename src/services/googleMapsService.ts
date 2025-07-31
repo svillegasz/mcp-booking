@@ -415,7 +415,7 @@ export class GoogleMapsService {
 
       return restaurants;
     } catch (error) {
-      // console.error('Error searching restaurants:', error);
+      console.error('Error searching restaurants:', error);
       this.recordFailure();
       throw new Error(
         `Failed to search restaurants: ${
@@ -638,10 +638,6 @@ export class GoogleMapsService {
         userRatingsTotal: place.user_ratings_total || 0,
         priceLevel: place.price_level,
         cuisineTypes: this.extractCuisineTypes(place.types || []),
-        // photos: place.photos?.map(
-        //   (photo: any) =>
-        //     `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${this.apiKey}`
-        // ),
         phoneNumber: place.formatted_phone_number,
         website: place.website,
         googleMapsUrl,

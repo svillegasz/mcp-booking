@@ -35,7 +35,9 @@ export const createMockLocation = (lat = 37.7749, lng = -122.4194) => ({
   longitude: lng,
 });
 
-export const createMockRestaurant = (overrides: Record<string, unknown> = {}) => ({
+export const createMockRestaurant = (
+  overrides: Record<string, unknown> = {}
+) => ({
   placeId: 'test-place',
   name: 'Test Restaurant',
   address: '123 Test Street',

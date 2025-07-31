@@ -10,7 +10,8 @@ import {
 export class GoogleMapsService {
   private client: Client;
   private apiKey: string;
-  private cache: Map<string, { data: Restaurant; timestamp: number }> = new Map();
+  private cache: Map<string, { data: Restaurant; timestamp: number }> =
+    new Map();
   private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes cache
 
   // Request deduplication
@@ -311,7 +312,7 @@ export class GoogleMapsService {
       // Pre-filter by distance using Google's location data before API calls
       // Filter first to avoid unnecessary object creation for out-of-range places
       // Note: Using 'any' for Google Places API data due to dynamic response structure
-  const placesWithDistance: Array<{ place: any; distance: number }> = [];
+      const placesWithDistance: Array<{ place: any; distance: number }> = [];
 
       for (const place of results) {
         if (!place.geometry?.location) continue;

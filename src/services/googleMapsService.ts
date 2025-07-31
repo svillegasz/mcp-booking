@@ -10,8 +10,28 @@ import {
 export class GoogleMapsService {
   private client: Client;
   private apiKey: string;
+  private cache: Map<string, { data: Restaurant; timestamp: number }> =
+    new Map();
+  private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes cache
 
-  constructor(apiKey: string) {
+  // Request deduplication
+  private pendingRequests: Map<string, Promise<Restaurant | null>> = new Map();
+
+  // Performance monitoring
+  private requestTimes: number[] = [];
+  private failureCount: number = 0;
+  private lastFailureTime: number = 0;
+  private circuitBreakerThreshold: number = 5; // Max failures before circuit breaker
+  private maxRequestTimeSamples: number = 100; // Moving average window size for request times
+
+  constructor(
+    apiKey: string,
+    options: {
+      cacheTimeout?: number; // Cache timeout in milliseconds (default: 5 minutes)
+      circuitBreakerThreshold?: number; // Max failures before circuit breaker (default: 5)
+      maxRequestTimeSamples?: number; // Moving average window size (default: 100)
+    } = {}
+  ) {
     // Create an HTTPS agent that ignores SSL certificate errors (only for local development)
     const httpsAgent = new https.Agent({
       rejectUnauthorized: false,
@@ -30,6 +50,13 @@ export class GoogleMapsService {
       axiosInstance: axiosInstance,
     });
     this.apiKey = apiKey;
+
+    // Apply configuration options
+    this.cacheTimeout = options.cacheTimeout ?? this.cacheTimeout;
+    this.circuitBreakerThreshold =
+      options.circuitBreakerThreshold ?? this.circuitBreakerThreshold;
+    this.maxRequestTimeSamples =
+      options.maxRequestTimeSamples ?? this.maxRequestTimeSamples;
   }
 
   /**
@@ -67,32 +94,134 @@ export class GoogleMapsService {
   }
 
   /**
+   * Cache management methods
+   */
+  private getCachedData(key: string): Restaurant | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+
+    if (Date.now() - cached.timestamp > this.cacheTimeout) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return cached.data;
+  }
+
+  private setCachedData(key: string, data: Restaurant): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Performance monitoring methods
+   */
+  /**
+   * Record a request time for performance monitoring
+   * Uses a sliding window to limit memory usage while providing meaningful metrics
+   *
+   * Design Decision: The moving average window size (default: 100) balances:
+   * - Memory usage: Larger windows consume more memory
+   * - Metric accuracy: Larger windows provide more stable averages
+   * - Responsiveness: Smaller windows react faster to performance changes
+   *
+   * @param duration Request duration in milliseconds
+   */
+  private recordRequestTime(duration: number): void {
+    this.requestTimes.push(duration);
+    // Maintain sliding window for moving average
+    if (this.requestTimes.length > this.maxRequestTimeSamples) {
+      this.requestTimes.shift();
+    }
+  }
+
+  private recordFailure(): void {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+  }
+
+  private shouldSkipRequest(): boolean {
+    // Circuit breaker: skip requests if too many recent failures
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    return (
+      this.failureCount >= this.circuitBreakerThreshold &&
+      this.lastFailureTime > fiveMinutesAgo
+    );
+  }
+
+  private getAverageRequestTime(): number {
+    if (this.requestTimes.length === 0) return 0;
+    return (
+      this.requestTimes.reduce((a, b) => a + b, 0) / this.requestTimes.length
+    );
+  }
+
+  /**
+   * Get performance metrics for monitoring
+   */
+  getPerformanceMetrics(): {
+    averageRequestTime: number;
+    failureCount: number;
+    totalRequests: number;
+    cacheSize: number;
+    circuitBreakerActive: boolean;
+    maxRequestTimeSamples: number;
+    currentSampleCount: number;
+  } {
+    return {
+      averageRequestTime: this.getAverageRequestTime(),
+      failureCount: this.failureCount,
+      totalRequests: this.requestTimes.length,
+      cacheSize: this.cache.size,
+      circuitBreakerActive: this.shouldSkipRequest(),
+      maxRequestTimeSamples: this.maxRequestTimeSamples,
+      currentSampleCount: this.requestTimes.length,
+    };
+  }
+
+  /**
+   * Reset performance counters (useful for testing)
+   */
+  resetPerformanceMetrics(): void {
+    this.requestTimes = [];
+    this.failureCount = 0;
+    this.lastFailureTime = 0;
+  }
+
+  /**
    * Execute promises with limited concurrency to avoid overwhelming the API
+   * Optimized version with proper semaphore-like concurrency control
    */
   private async executeConcurrently<T>(
     promises: (() => Promise<T>)[],
-    concurrency: number = 5
+    concurrency: number = 10 // Increased from 5 to 10
   ): Promise<T[]> {
     const results: T[] = [];
-    const executing: Promise<void>[] = [];
+    let index = 0;
 
-    for (const promiseFactory of promises) {
-      const promise = promiseFactory().then(result => {
-        results.push(result);
-      });
+    // Worker function that processes promises
+    const worker = async (): Promise<void> => {
+      while (index < promises.length) {
+        const currentIndex = index++;
+        if (currentIndex >= promises.length) break;
 
-      executing.push(promise);
-
-      if (executing.length >= concurrency) {
-        await Promise.race(executing);
-        executing.splice(
-          executing.findIndex(p => p === promise),
-          1
-        );
+        try {
+          const result = await promises[currentIndex]();
+          results[currentIndex] = result; // Maintain order
+        } catch (error) {
+          results[currentIndex] = null as T; // Handle errors gracefully
+        }
       }
-    }
+    };
 
-    await Promise.all(executing);
+    // Create worker pool
+    const workers = Array(Math.min(concurrency, promises.length))
+      .fill(null)
+      .map(() => worker());
+
+    await Promise.all(workers);
     return results;
   }
 
@@ -152,12 +281,13 @@ export class GoogleMapsService {
       }
 
       // Build API request parameters
+      // Note: Using 'any' for Google Maps API params due to complex union types
       const apiParams: any = {
         location: `${searchLocation.latitude},${searchLocation.longitude}`,
         radius,
         type: 'restaurant',
         keyword: searchQuery,
-        language: locale,
+        language: locale as any,
         key: this.apiKey,
       };
 
@@ -172,39 +302,80 @@ export class GoogleMapsService {
       });
 
       if (response.data.status !== 'OK') {
+        this.recordFailure();
         throw new Error(`Google Places API error: ${response.data.status}`);
       }
 
       // Get detailed information for each restaurant
       const results = response.data.results || [];
 
-      // Limit to top 20 results to avoid API quota issues
-      const limitedResults = results.slice(0, 20);
+      // Pre-filter by distance using Google's location data before API calls
+      // Filter first to avoid unnecessary object creation for out-of-range places
+      // Note: Using 'any' for Google Places API data due to dynamic response structure
+      const placesWithDistance: Array<{ place: any; distance: number }> = [];
+
+      for (const place of results) {
+        if (!place.geometry?.location) continue;
+
+        const distance = this.calculateDistance(
+          searchLocation.latitude,
+          searchLocation.longitude,
+          place.geometry.location.lat,
+          place.geometry.location.lng
+        );
+
+        if (distance <= radius) {
+          placesWithDistance.push({ place, distance });
+        }
+      }
+
+      // Sort by distance and limit results
+      const preFilteredResults = placesWithDistance
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 15) // Reduced from 20 to 15 for better performance
+        .map(({ place, distance }) => ({
+          ...place,
+          preliminaryDistance: distance,
+        }));
 
       // 🚀 PERFORMANCE OPTIMIZATION: Use controlled concurrency for API calls
-      const restaurantPromises = limitedResults.map(place => async () => {
+      const restaurantPromises = preFilteredResults.map(place => async () => {
         try {
           if (place.place_id) {
-            const restaurant = await this.getRestaurantDetails(
-              place.place_id,
-              locale
-            );
+            // Check cache first
+            const cacheKey = `restaurant:${place.place_id}:${locale}`;
+            let restaurant = this.getCachedData(cacheKey);
+
+            if (!restaurant) {
+              // Check for pending request to avoid duplicate calls
+              const requestKey = `pending:${cacheKey}`;
+              let requestPromise = this.pendingRequests.get(requestKey);
+
+              if (!requestPromise) {
+                requestPromise = this.getRestaurantDetails(
+                  place.place_id,
+                  locale,
+                  false // Only basic fields for search results
+                );
+                this.pendingRequests.set(requestKey, requestPromise);
+
+                // Clean up pending request when done
+                requestPromise.finally(() => {
+                  this.pendingRequests.delete(requestKey);
+                });
+              }
+
+              restaurant = await requestPromise;
+
+              if (restaurant) {
+                this.setCachedData(cacheKey, restaurant);
+              }
+            }
 
             if (restaurant) {
-              // Calculate distance from search location to restaurant
-              const distance = this.calculateDistance(
-                searchLocation.latitude,
-                searchLocation.longitude,
-                restaurant.location.latitude,
-                restaurant.location.longitude
-              );
-
-              // Only include restaurants within the specified radius
-              if (distance <= radius) {
-                // Add distance information to the restaurant object
-                restaurant.distance = Math.round(distance);
-                return restaurant;
-              }
+              // Use pre-calculated distance
+              restaurant.distance = Math.round(place.preliminaryDistance);
+              return restaurant;
             }
           }
         } catch (error) {
@@ -216,7 +387,7 @@ export class GoogleMapsService {
         return null;
       });
 
-      // Wait for all API calls to complete with controlled concurrency (max 5 simultaneous)
+      // Wait for all API calls to complete with controlled concurrency
       const restaurantResults = await this.executeConcurrently(
         restaurantPromises,
         5
@@ -234,9 +405,18 @@ export class GoogleMapsService {
         return distanceA - distanceB;
       });
 
+      // Log performance metrics periodically
+      if (this.requestTimes.length % 10 === 0 && this.requestTimes.length > 0) {
+        const metrics = this.getPerformanceMetrics();
+        console.log(
+          `📊 GoogleMapsService Performance: ${JSON.stringify(metrics)}`
+        );
+      }
+
       return restaurants;
     } catch (error) {
       // console.error('Error searching restaurants:', error);
+      this.recordFailure();
       throw new Error(
         `Failed to search restaurants: ${
           error instanceof Error ? error.message : 'Unknown error'
@@ -252,16 +432,30 @@ export class GoogleMapsService {
     placeName: string,
     locale: string = 'en'
   ): Promise<Location> {
+    // Check circuit breaker
+    if (this.shouldSkipRequest()) {
+      throw new Error(
+        'Circuit breaker activated - geocoding temporarily unavailable'
+      );
+    }
+
+    const startTime = Date.now();
+
     try {
       const response = await this.client.geocode({
         params: {
           address: placeName,
-          language: locale,
+          language: locale as any, // Google Maps API accepts flexible locale strings
           key: this.apiKey,
         },
       });
 
+      // Record successful request time
+      const duration = Date.now() - startTime;
+      this.recordRequestTime(duration);
+
       if (response.data.status !== 'OK') {
+        this.recordFailure();
         throw new Error(`Geocoding API error: ${response.data.status}`);
       }
 
@@ -279,6 +473,7 @@ export class GoogleMapsService {
       };
     } catch (error) {
       console.error(`Error geocoding place name "${placeName}":`, error);
+      this.recordFailure();
       throw new Error(
         `Failed to geocode place name: ${
           error instanceof Error ? error.message : 'Unknown error'
@@ -289,57 +484,126 @@ export class GoogleMapsService {
 
   /**
    * Get detailed information about a specific restaurant
+   * Optimized with minimal required fields for initial search
    */
   async getRestaurantDetails(
     placeId: string,
-    locale: string = 'en'
+    locale: string = 'en',
+    includeExtendedFields: boolean = false
+  ): Promise<Restaurant | null> {
+    // Check cache first
+    const cacheKey = `restaurant:${placeId}:${locale}:${includeExtendedFields}`;
+    const cached = this.getCachedData(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Check circuit breaker
+    if (this.shouldSkipRequest()) {
+      console.warn('Circuit breaker activated - skipping API request');
+      return null;
+    }
+
+    // Check for pending request to avoid duplicate calls
+    const requestKey = `pending:${cacheKey}`;
+    let requestPromise = this.pendingRequests.get(requestKey);
+
+    if (requestPromise) {
+      return requestPromise;
+    }
+
+    const startTime = Date.now();
+
+    // Create the actual request promise
+    requestPromise = this.executeRestaurantDetailsRequest(
+      placeId,
+      locale,
+      includeExtendedFields,
+      startTime
+    );
+    this.pendingRequests.set(requestKey, requestPromise);
+
+    // Clean up pending request when done
+    requestPromise.finally(() => {
+      this.pendingRequests.delete(requestKey);
+    });
+
+    const result = await requestPromise;
+
+    // Cache the result
+    if (result) {
+      this.setCachedData(cacheKey, result);
+    }
+
+    return result;
+  }
+
+  private async executeRestaurantDetailsRequest(
+    placeId: string,
+    locale: string,
+    includeExtendedFields: boolean,
+    startTime: number
   ): Promise<Restaurant | null> {
     try {
+      // Essential fields for search results
+      const basicFields = [
+        'place_id',
+        'name',
+        'formatted_address',
+        'geometry',
+        'types',
+        'rating',
+        'user_ratings_total',
+        'price_level',
+        'formatted_phone_number',
+        'website',
+        'opening_hours/open_now', // Only current status, not full hours
+        'reservable',
+      ];
+
+      // Extended fields for detailed view (loaded on-demand)
+      const extendedFields = [
+        'opening_hours',
+        'reviews',
+        'curbside_pickup',
+        'delivery',
+        'dine_in',
+        'takeout',
+        'serves_breakfast',
+        'serves_lunch',
+        'serves_dinner',
+        'serves_brunch',
+        'serves_beer',
+        'serves_wine',
+        'serves_vegetarian_food',
+      ];
+
+      const fields = includeExtendedFields
+        ? [...basicFields, ...extendedFields]
+        : basicFields;
+
       const response = await this.client.placeDetails({
         params: {
           place_id: placeId,
-          language: locale as any,
-          fields: [
-            // Basic fields
-            'place_id',
-            'name',
-            'formatted_address',
-            'geometry',
-            'types',
-            // "photos",
-            // Contact fields
-            'formatted_phone_number',
-            'website',
-            'opening_hours',
-            // Atmosphere fields (including reservation-related)
-            'rating',
-            'user_ratings_total',
-            'price_level',
-            'reviews',
-            'reservable', // 🆕 NEW: Indicates if place supports reservations
-            'curbside_pickup', // 🆕 NEW: Supports curbside pickup
-            'delivery', // 🆕 NEW: Supports delivery
-            'dine_in', // 🆕 NEW: Supports dine-in
-            'takeout', // 🆕 NEW: Supports takeout
-            'serves_breakfast', // 🆕 NEW: Serves breakfast
-            'serves_lunch', // 🆕 NEW: Serves lunch
-            'serves_dinner', // 🆕 NEW: Serves dinner
-            'serves_brunch', // 🆕 NEW: Serves brunch
-            'serves_beer', // 🆕 NEW: Serves beer
-            'serves_wine', // 🆕 NEW: Serves wine
-            'serves_vegetarian_food', // 🆕 NEW: Serves vegetarian food
-          ],
+          language: locale as any, // Google Maps API accepts flexible locale strings
+          fields,
           key: this.apiKey,
         },
       });
+
+      // Record successful request time
+      const duration = Date.now() - startTime;
+      this.recordRequestTime(duration);
 
       if (response.data.status !== 'OK') {
         console.warn(
           `Failed to get place details for ${placeId}: ${response.data.status}`
         );
+        this.recordFailure();
         return null;
       }
 
+      // Note: Using 'any' for Google Maps API response due to dynamic field selection
       const place = response.data.result as any;
 
       // Validate required fields
@@ -404,6 +668,7 @@ export class GoogleMapsService {
       };
     } catch (error) {
       //   console.error(`Error getting restaurant details for ${placeId}:`, error);
+      this.recordFailure();
       return null;
     }
   }
@@ -463,10 +728,7 @@ export class GoogleMapsService {
       }
 
       // OpenTable detection
-      if (
-        hostname === 'opentable.com' ||
-        hostname.endsWith('.opentable.com')
-      ) {
+      if (hostname === 'opentable.com' || hostname.endsWith('.opentable.com')) {
         return {
           ...bookingInfo,
           reservable: true,
@@ -478,10 +740,7 @@ export class GoogleMapsService {
       }
 
       // Resy detection
-      if (
-        hostname === 'resy.com' ||
-        hostname.endsWith('.resy.com')
-      ) {
+      if (hostname === 'resy.com' || hostname.endsWith('.resy.com')) {
         return {
           ...bookingInfo,
           reservable: true,

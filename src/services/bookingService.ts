@@ -1,4 +1,4 @@
-import { Restaurant, BookingRequest, BookingResponse } from "../types/index.js";
+import { Restaurant, BookingRequest, BookingResponse } from '../types/index.js';
 
 export class BookingService {
   /**
@@ -14,7 +14,7 @@ export class BookingService {
       if (!validation.isValid) {
         return {
           success: false,
-          message: validation.message || "Invalid booking request",
+          message: validation.message || 'Invalid booking request',
         };
       }
 
@@ -48,10 +48,10 @@ export class BookingService {
 
       return bookingResult;
     } catch (error) {
-      console.error("Error making reservation:", error);
+      console.error('Error making reservation:', error);
       return {
         success: false,
-        message: `Failed to make reservation: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to make reservation: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   }
@@ -66,7 +66,7 @@ export class BookingService {
     if (!bookingInfo?.bookingUrl) {
       return {
         success: false,
-        message: "Booking URL not available",
+        message: 'Booking URL not available',
       };
     }
 
@@ -76,8 +76,8 @@ export class BookingService {
     const date = new Date(request.preferredDateTime);
     const formattedDate = date.toLocaleDateString();
     const formattedTime = date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     return {
@@ -93,9 +93,9 @@ Booking URL: ${bookingInfo.bookingUrl}
 Reservation Details:
 • Date: ${formattedDate}
 • Time: ${formattedTime}
-• Party Size: ${request.partySize} ${request.partySize === 1 ? "person" : "people"}
+• Party Size: ${request.partySize} ${request.partySize === 1 ? 'person' : 'people'}
 • Contact: ${request.contactInfo.name} (${request.contactInfo.phone})
-${request.specialRequests ? `• Special Requests: ${request.specialRequests}` : ""}
+${request.specialRequests ? `• Special Requests: ${request.specialRequests}` : ''}
 
 Next Steps:
 1. Click the booking URL above
@@ -116,25 +116,25 @@ Next Steps:
     const date = new Date(request.preferredDateTime);
     const formattedDate = date.toLocaleDateString();
     const formattedTime = date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     return {
       success: true,
-      message: "This restaurant requires phone reservations",
+      message: 'This restaurant requires phone reservations',
       confirmationDetails: `
 Phone Reservation Required
 --------------------------
 Restaurant: ${restaurant.name}
-Phone: ${restaurant.phoneNumber || "Contact restaurant directly"}
+Phone: ${restaurant.phoneNumber || 'Contact restaurant directly'}
 
 Reservation Details to Mention:
 • Date: ${formattedDate}
 • Time: ${formattedTime}
-• Party Size: ${request.partySize} ${request.partySize === 1 ? "person" : "people"}
+• Party Size: ${request.partySize} ${request.partySize === 1 ? 'person' : 'people'}
 • Contact: ${request.contactInfo.name} (${request.contactInfo.phone})
-${request.specialRequests ? `• Special Requests: ${request.specialRequests}` : ""}
+${request.specialRequests ? `• Special Requests: ${request.specialRequests}` : ''}
 
 💡 Tips for calling:
 • Call during business hours for best response
@@ -153,13 +153,13 @@ ${request.specialRequests ? `• Special Requests: ${request.specialRequests}` :
     const date = new Date(request.preferredDateTime);
     const formattedDate = date.toLocaleDateString();
     const formattedTime = date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     return {
       success: true,
-      message: "This restaurant operates on a walk-in basis only",
+      message: 'This restaurant operates on a walk-in basis only',
       confirmationDetails: `
 Walk-In Only Restaurant
 -----------------------
@@ -169,17 +169,17 @@ Address: ${restaurant.address}
 Your Planned Visit:
 • Date: ${formattedDate}
 • Time: ${formattedTime}
-• Party Size: ${request.partySize} ${request.partySize === 1 ? "person" : "people"}
+• Party Size: ${request.partySize} ${request.partySize === 1 ? 'person' : 'people'}
 
 💡 Walk-In Tips:
 • Arrive early, especially during peak hours (6-8 PM)
 • Consider visiting during off-peak times for shorter waits
-• Call ahead to check current wait times: ${restaurant.phoneNumber || "Contact restaurant"}
+• Call ahead to check current wait times: ${restaurant.phoneNumber || 'Contact restaurant'}
 • Be flexible with seating arrangements
 ${
   restaurant.openingHours?.openNow !== undefined
-    ? `• Current Status: ${restaurant.openingHours.openNow ? "Open" : "Closed"}`
-    : ""
+    ? `• Current Status: ${restaurant.openingHours.openNow ? 'Open' : 'Closed'}`
+    : ''
 }
 
 ⚠️ Note: Wait times may vary, especially on weekends and holidays.
@@ -192,18 +192,18 @@ ${
    */
   private getPlatformDisplayName(platform?: string): string {
     switch (platform) {
-      case "opentable":
-        return "OpenTable";
-      case "resy":
-        return "Resy";
-      case "yelp":
-        return "Yelp Reservations";
-      case "google_reserve":
-        return "Google Reserve";
-      case "restaurant_website":
-        return "Restaurant Website";
+      case 'opentable':
+        return 'OpenTable';
+      case 'resy':
+        return 'Resy';
+      case 'yelp':
+        return 'Yelp Reservations';
+      case 'google_reserve':
+        return 'Google Reserve';
+      case 'restaurant_website':
+        return 'Restaurant Website';
       default:
-        return "Online Booking Platform";
+        return 'Online Booking Platform';
     }
   }
 
@@ -220,33 +220,33 @@ ${
       if (bookingInfo.supportsOnlineBooking && bookingInfo.bookingUrl) {
         // Provide platform-specific instructions
         switch (bookingInfo.bookingPlatform) {
-          case "opentable":
+          case 'opentable':
             instructions.push(`🍽️ **Book Online via OpenTable**`);
             instructions.push(`   Visit: ${bookingInfo.bookingUrl}`);
             instructions.push(`   ✅ Instant confirmation available`);
             instructions.push(`   ✅ Easy cancellation and modification`);
             break;
 
-          case "resy":
+          case 'resy':
             instructions.push(`🍽️ **Book Online via Resy**`);
             instructions.push(`   Visit: ${bookingInfo.bookingUrl}`);
             instructions.push(`   ✅ Real-time availability`);
             instructions.push(`   ✅ Premium dining experiences available`);
             break;
 
-          case "yelp":
+          case 'yelp':
             instructions.push(`🍽️ **Book Online via Yelp Reservations**`);
             instructions.push(`   Visit: ${bookingInfo.bookingUrl}`);
             instructions.push(`   ✅ Integrated with restaurant reviews`);
             break;
 
-          case "google_reserve":
+          case 'google_reserve':
             instructions.push(`🍽️ **Book Online via Google Reserve**`);
             instructions.push(`   Visit: ${bookingInfo.bookingUrl}`);
             instructions.push(`   ✅ Integrated with Google Maps`);
             break;
 
-          case "restaurant_website":
+          case 'restaurant_website':
             instructions.push(`🍽️ **Book Online via Restaurant Website**`);
             instructions.push(`   Visit: ${bookingInfo.bookingUrl}`);
             instructions.push(`   ✅ Direct booking with restaurant`);
@@ -255,13 +255,13 @@ ${
             );
             break;
 
-          case "other":
+          case 'other':
             instructions.push(`🌐 **Online Booking Available**`);
             instructions.push(`   Visit: ${bookingInfo.bookingUrl}`);
             instructions.push(`   💡 Check website for reservation system`);
             break;
         }
-        instructions.push(""); // Add spacing
+        instructions.push(''); // Add spacing
       }
 
       // Add phone booking option if available
@@ -279,7 +279,7 @@ ${
             `   💡 Useful for special requests or large parties`
           );
         }
-        instructions.push(""); // Add spacing
+        instructions.push(''); // Add spacing
       }
 
       // Add booking recommendations based on restaurant info
@@ -304,26 +304,26 @@ ${
     }
 
     // Add general booking advice
-    instructions.push("💡 **General Tips:**");
+    instructions.push('💡 **General Tips:**');
     instructions.push(
-      "   • Consider calling ahead, especially for peak dining times"
+      '   • Consider calling ahead, especially for peak dining times'
     );
 
     if (restaurant.rating >= 4.5) {
       instructions.push(
-        "   • ⭐ This is a highly-rated restaurant - reservations are strongly recommended"
+        '   • ⭐ This is a highly-rated restaurant - reservations are strongly recommended'
       );
     }
 
     if (restaurant.priceLevel && restaurant.priceLevel >= 3) {
       instructions.push(
-        "   • 💰 Fine dining establishment - advance reservations recommended"
+        '   • 💰 Fine dining establishment - advance reservations recommended'
       );
     }
 
     // Add opening hours information
     if (restaurant.openingHours?.weekdayText) {
-      instructions.push("\n📅 **Opening Hours:**");
+      instructions.push('\n📅 **Opening Hours:**');
       restaurant.openingHours.weekdayText.forEach(hours => {
         instructions.push(`   ${hours}`);
       });
@@ -332,12 +332,12 @@ ${
     // Add current status if available
     if (restaurant.openingHours?.openNow !== undefined) {
       const status = restaurant.openingHours.openNow
-        ? "🟢 Currently Open"
-        : "🔴 Currently Closed";
+        ? '🟢 Currently Open'
+        : '🔴 Currently Closed';
       instructions.push(`\n${status}`);
     }
 
-    return instructions.join("\n");
+    return instructions.join('\n');
   }
 
   /**
@@ -361,7 +361,7 @@ ${
     if (requestedDate < now) {
       return {
         available: false,
-        message: "Cannot make reservations for past dates",
+        message: 'Cannot make reservations for past dates',
       };
     }
 
@@ -373,7 +373,7 @@ ${
       return {
         available: false,
         message:
-          "Reservations are typically not available more than 30 days in advance",
+          'Reservations are typically not available more than 30 days in advance',
       };
     }
 
@@ -391,7 +391,7 @@ ${
     if (isAvailable) {
       return {
         available: true,
-        message: "Table appears to be available for your requested time",
+        message: 'Table appears to be available for your requested time',
       };
     } else {
       // Generate alternative times
@@ -410,7 +410,7 @@ ${
       return {
         available: false,
         message:
-          "Your requested time may not be available. Consider these alternative times:",
+          'Your requested time may not be available. Consider these alternative times:',
         alternativeTimes: alternatives,
       };
     }
@@ -427,7 +427,7 @@ ${
     if (request.partySize < 1 || request.partySize > 20) {
       return {
         isValid: false,
-        message: "Party size must be between 1 and 20 people",
+        message: 'Party size must be between 1 and 20 people',
       };
     }
 
@@ -437,13 +437,13 @@ ${
       if (isNaN(requestedDate.getTime())) {
         return {
           isValid: false,
-          message: "Invalid date format. Please use ISO date string.",
+          message: 'Invalid date format. Please use ISO date string.',
         };
       }
     } catch {
       return {
         isValid: false,
-        message: "Invalid date format. Please use ISO date string.",
+        message: 'Invalid date format. Please use ISO date string.',
       };
     }
 
@@ -451,18 +451,16 @@ ${
     if (!request.contactInfo.name || !request.contactInfo.phone) {
       return {
         isValid: false,
-        message: "Name and phone number are required for reservations",
+        message: 'Name and phone number are required for reservations',
       };
     }
 
     // Validate phone number format (basic check)
     const phoneRegex = /^[+]?[1-9][\d]{0,15}$/;
-    if (
-      !phoneRegex.test(request.contactInfo.phone.replace(/[\s-()]/g, ""))
-    ) {
+    if (!phoneRegex.test(request.contactInfo.phone.replace(/[\s-()]/g, ''))) {
       return {
         isValid: false,
-        message: "Please provide a valid phone number",
+        message: 'Please provide a valid phone number',
       };
     }
 
@@ -493,7 +491,7 @@ ${
         success: true,
         bookingId,
         confirmationDetails,
-        message: "Reservation successfully created!",
+        message: 'Reservation successfully created!',
       };
     } else {
       // Check availability for alternative suggestions
@@ -506,7 +504,7 @@ ${
       return {
         success: false,
         message:
-          "Unable to confirm reservation at requested time. Please try calling the restaurant directly.",
+          'Unable to confirm reservation at requested time. Please try calling the restaurant directly.',
         alternativeOptions: availability.alternativeTimes
           ? [request.restaurant]
           : undefined,
@@ -533,8 +531,8 @@ ${
     const date = new Date(request.preferredDateTime);
     const formattedDate = date.toLocaleDateString();
     const formattedTime = date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     return `
@@ -545,14 +543,14 @@ Restaurant: ${request.restaurant.name}
 Address: ${request.restaurant.address}
 Date: ${formattedDate}
 Time: ${formattedTime}
-Party Size: ${request.partySize} ${request.partySize === 1 ? "person" : "people"}
+Party Size: ${request.partySize} ${request.partySize === 1 ? 'person' : 'people'}
 Name: ${request.contactInfo.name}
 Phone: ${request.contactInfo.phone}
-${request.specialRequests ? `Special Requests: ${request.specialRequests}` : ""}
+${request.specialRequests ? `Special Requests: ${request.specialRequests}` : ''}
 
 Please arrive on time and bring a valid ID.
 For changes or cancellations, please call the restaurant directly.
-${request.restaurant.phoneNumber ? `Restaurant Phone: ${request.restaurant.phoneNumber}` : ""}
+${request.restaurant.phoneNumber ? `Restaurant Phone: ${request.restaurant.phoneNumber}` : ''}
     `.trim();
   }
 }

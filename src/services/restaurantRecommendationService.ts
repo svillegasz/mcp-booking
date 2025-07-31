@@ -2,25 +2,28 @@ import {
   Restaurant,
   RestaurantSearchParams,
   RestaurantRecommendation,
-} from "../types/index.js";
+} from '../types/index.js';
 
 export class RestaurantRecommendationService {
   /**
    * Analyze and score restaurants based on search criteria
+   * Optimized with parallel processing
    */
   async getRecommendations(
     restaurants: Restaurant[],
     params: RestaurantSearchParams
   ): Promise<RestaurantRecommendation[]> {
-    const recommendations: RestaurantRecommendation[] = [];
+    // Process all restaurants in parallel for better performance
+    const recommendationPromises = restaurants.map(async restaurant => {
+      const [score, suitabilityForEvent, moodMatch] = await Promise.all([
+        // These can run in parallel since they're independent calculations
+        Promise.resolve(this.calculateRestaurantScore(restaurant, params)),
+        Promise.resolve(
+          this.calculateEventSuitability(restaurant, params.event)
+        ),
+        Promise.resolve(this.calculateMoodMatch(restaurant, params.mood)),
+      ]);
 
-    for (const restaurant of restaurants) {
-      const score = this.calculateRestaurantScore(restaurant, params);
-      const suitabilityForEvent = this.calculateEventSuitability(
-        restaurant,
-        params.event
-      );
-      const moodMatch = this.calculateMoodMatch(restaurant, params.mood);
       const reasoning = this.generateReasoning(
         restaurant,
         params,
@@ -29,14 +32,16 @@ export class RestaurantRecommendationService {
         moodMatch
       );
 
-      recommendations.push({
+      return {
         restaurant,
         score,
         reasoning,
         suitabilityForEvent,
         moodMatch,
-      });
-    }
+      };
+    });
+
+    const recommendations = await Promise.all(recommendationPromises);
 
     // Sort by score (highest first) and return top 3
     return recommendations.sort((a, b) => b.score - a.score).slice(0, 3);
@@ -130,55 +135,55 @@ export class RestaurantRecommendationService {
       dating: {
         preferredPriceLevel: [2, 3, 4], // Mid to high-end
         preferredCuisines: [
-          "italian",
-          "french",
-          "japanese",
-          "mediterranean",
-          "fine dining",
+          'italian',
+          'french',
+          'japanese',
+          'mediterranean',
+          'fine dining',
         ],
-        avoidCuisines: ["fast food", "buffet"],
+        avoidCuisines: ['fast food', 'buffet'],
         minRating: 4.0,
-        atmosphereKeywords: ["romantic", "intimate", "cozy", "elegant"],
+        atmosphereKeywords: ['romantic', 'intimate', 'cozy', 'elegant'],
       },
       gathering: {
         preferredPriceLevel: [1, 2, 3], // Budget to mid-range
         preferredCuisines: [
-          "american",
-          "italian",
-          "chinese",
-          "mexican",
-          "pizza",
+          'american',
+          'italian',
+          'chinese',
+          'mexican',
+          'pizza',
         ],
-        avoidCuisines: ["fine dining"],
+        avoidCuisines: ['fine dining'],
         minRating: 3.5,
-        atmosphereKeywords: ["family-friendly", "spacious", "casual", "kids"],
+        atmosphereKeywords: ['family-friendly', 'spacious', 'casual', 'kids'],
       },
       business: {
         preferredPriceLevel: [2, 3, 4], // Mid to high-end
-        preferredCuisines: ["american", "italian", "steakhouse", "seafood"],
-        avoidCuisines: ["fast food", "buffet"],
+        preferredCuisines: ['american', 'italian', 'steakhouse', 'seafood'],
+        avoidCuisines: ['fast food', 'buffet'],
         minRating: 4.0,
-        atmosphereKeywords: ["quiet", "professional", "upscale", "private"],
+        atmosphereKeywords: ['quiet', 'professional', 'upscale', 'private'],
       },
       casual: {
         preferredPriceLevel: [1, 2], // Budget to mid-range
-        preferredCuisines: ["american", "pizza", "cafe", "mexican", "asian"],
+        preferredCuisines: ['american', 'pizza', 'cafe', 'mexican', 'asian'],
         avoidCuisines: [],
         minRating: 3.0,
-        atmosphereKeywords: ["casual", "relaxed", "friendly"],
+        atmosphereKeywords: ['casual', 'relaxed', 'friendly'],
       },
       celebration: {
         preferredPriceLevel: [3, 4], // High-end
         preferredCuisines: [
-          "fine dining",
-          "steakhouse",
-          "seafood",
-          "french",
-          "italian",
+          'fine dining',
+          'steakhouse',
+          'seafood',
+          'french',
+          'italian',
         ],
-        avoidCuisines: ["fast food", "cafe"],
+        avoidCuisines: ['fast food', 'cafe'],
         minRating: 4.2,
-        atmosphereKeywords: ["upscale", "elegant", "special", "celebration"],
+        atmosphereKeywords: ['upscale', 'elegant', 'special', 'celebration'],
       },
     };
 
@@ -224,18 +229,18 @@ export class RestaurantRecommendationService {
    */
   private calculateMoodMatch(restaurant: Restaurant, mood: string): number {
     const moodKeywords = {
-      romantic: ["intimate", "cozy", "candlelit", "wine", "date", "romantic"],
-      casual: ["casual", "relaxed", "friendly", "laid-back", "comfortable"],
-      upscale: ["upscale", "elegant", "sophisticated", "fine", "luxury"],
-      fun: ["lively", "energetic", "vibrant", "entertainment", "music"],
-      quiet: ["quiet", "peaceful", "serene", "calm", "tranquil"],
-      adventurous: ["unique", "exotic", "fusion", "creative", "innovative"],
+      romantic: ['intimate', 'cozy', 'candlelit', 'wine', 'date', 'romantic'],
+      casual: ['casual', 'relaxed', 'friendly', 'laid-back', 'comfortable'],
+      upscale: ['upscale', 'elegant', 'sophisticated', 'fine', 'luxury'],
+      fun: ['lively', 'energetic', 'vibrant', 'entertainment', 'music'],
+      quiet: ['quiet', 'peaceful', 'serene', 'calm', 'tranquil'],
+      adventurous: ['unique', 'exotic', 'fusion', 'creative', 'innovative'],
       traditional: [
-        "traditional",
-        "authentic",
-        "classic",
-        "heritage",
-        "original",
+        'traditional',
+        'authentic',
+        'classic',
+        'heritage',
+        'original',
       ],
     };
 
@@ -252,7 +257,7 @@ export class RestaurantRecommendationService {
       ...restaurant.cuisineTypes,
       ...(restaurant.reviews?.map(r => r.text) || []),
     ]
-      .join(" ")
+      .join(' ')
       .toLowerCase();
 
     for (const keyword of keywords) {
@@ -268,10 +273,10 @@ export class RestaurantRecommendationService {
 
     // Consider price level for certain moods
     if (restaurant.priceLevel) {
-      if (mood.toLowerCase() === "upscale" && restaurant.priceLevel >= 3) {
+      if (mood.toLowerCase() === 'upscale' && restaurant.priceLevel >= 3) {
         score += 1;
       } else if (
-        mood.toLowerCase() === "casual" &&
+        mood.toLowerCase() === 'casual' &&
         restaurant.priceLevel <= 2
       ) {
         score += 1;
@@ -317,7 +322,7 @@ export class RestaurantRecommendationService {
       );
       if (matchingCuisines.length > 0) {
         reasons.push(
-          `Serves ${matchingCuisines.join(", ")} cuisine as requested`
+          `Serves ${matchingCuisines.join(', ')} cuisine as requested`
         );
       }
     }
@@ -339,22 +344,22 @@ export class RestaurantRecommendationService {
     // Price level
     if (restaurant.priceLevel) {
       const priceLabels = [
-        "",
-        "Budget-friendly",
-        "Moderately priced",
-        "Upscale",
-        "High-end",
+        '',
+        'Budget-friendly',
+        'Moderately priced',
+        'Upscale',
+        'High-end',
       ];
       reasons.push(priceLabels[restaurant.priceLevel]);
     }
 
     // Opening hours
     if (restaurant.openingHours?.openNow) {
-      reasons.push("Currently open");
+      reasons.push('Currently open');
     }
 
     return reasons.length > 0
-      ? reasons.join(". ") + "."
-      : "Recommended based on location and general criteria.";
+      ? reasons.join('. ') + '.'
+      : 'Recommended based on location and general criteria.';
   }
 }

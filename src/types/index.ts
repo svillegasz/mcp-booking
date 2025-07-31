@@ -33,12 +33,12 @@ export interface Restaurant {
     reservable?: boolean;
     bookingUrl?: string;
     bookingPlatform?:
-      | "opentable"
-      | "resy"
-      | "yelp"
-      | "restaurant_website"
-      | "google_reserve"
-      | "other";
+      | 'opentable'
+      | 'resy'
+      | 'yelp'
+      | 'restaurant_website'
+      | 'google_reserve'
+      | 'other';
     supportsOnlineBooking?: boolean;
     requiresPhone?: boolean;
   };

@@ -355,12 +355,12 @@ describe('GoogleMapsService', () => {
   describe('Performance Monitoring', () => {
     test('should track request times', () => {
       const service = new GoogleMapsService('test-key');
-      
+
       // Access private method for testing
       (service as any).recordRequestTime(100);
       (service as any).recordRequestTime(200);
       (service as any).recordRequestTime(150);
-      
+
       const metrics = service.getPerformanceMetrics();
       expect(metrics.averageRequestTime).toBe(150);
       expect(metrics.totalRequests).toBe(3);
@@ -370,14 +370,14 @@ describe('GoogleMapsService', () => {
 
     test('should respect custom maxRequestTimeSamples configuration', () => {
       const service = new GoogleMapsService('test-key', {
-        maxRequestTimeSamples: 5
+        maxRequestTimeSamples: 5,
       });
-      
+
       // Add more samples than the configured limit
       for (let i = 1; i <= 8; i++) {
         (service as any).recordRequestTime(i * 10);
       }
-      
+
       const metrics = service.getPerformanceMetrics();
       expect(metrics.maxRequestTimeSamples).toBe(5);
       expect(metrics.currentSampleCount).toBe(5); // Should be limited to 5
@@ -388,12 +388,12 @@ describe('GoogleMapsService', () => {
       const service = new GoogleMapsService('test-key', {
         cacheTimeout: 10000, // 10 seconds
         circuitBreakerThreshold: 3,
-        maxRequestTimeSamples: 50
+        maxRequestTimeSamples: 50,
       });
-      
+
       const metrics = service.getPerformanceMetrics();
       expect(metrics.maxRequestTimeSamples).toBe(50);
-      
+
       // Verify internal configuration (access private properties for testing)
       expect((service as any).cacheTimeout).toBe(10000);
       expect((service as any).circuitBreakerThreshold).toBe(3);

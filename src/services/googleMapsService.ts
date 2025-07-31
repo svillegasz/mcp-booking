@@ -10,11 +10,11 @@ import {
 export class GoogleMapsService {
   private client: Client;
   private apiKey: string;
-  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private cache: Map<string, { data: Restaurant; timestamp: number }> = new Map();
   private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes cache
 
   // Request deduplication
-  private pendingRequests: Map<string, Promise<any>> = new Map();
+  private pendingRequests: Map<string, Promise<Restaurant | null>> = new Map();
 
   // Performance monitoring
   private requestTimes: number[] = [];
@@ -49,11 +49,13 @@ export class GoogleMapsService {
       axiosInstance: axiosInstance,
     });
     this.apiKey = apiKey;
-    
+
     // Apply configuration options
     this.cacheTimeout = options.cacheTimeout ?? this.cacheTimeout;
-    this.circuitBreakerThreshold = options.circuitBreakerThreshold ?? this.circuitBreakerThreshold;
-    this.maxRequestTimeSamples = options.maxRequestTimeSamples ?? this.maxRequestTimeSamples;
+    this.circuitBreakerThreshold =
+      options.circuitBreakerThreshold ?? this.circuitBreakerThreshold;
+    this.maxRequestTimeSamples =
+      options.maxRequestTimeSamples ?? this.maxRequestTimeSamples;
   }
 
   /**
@@ -93,7 +95,7 @@ export class GoogleMapsService {
   /**
    * Cache management methods
    */
-  private getCachedData(key: string): any | null {
+  private getCachedData(key: string): Restaurant | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
 
@@ -105,7 +107,7 @@ export class GoogleMapsService {
     return cached.data;
   }
 
-  private setCachedData(key: string, data: any): void {
+  private setCachedData(key: string, data: Restaurant): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
@@ -118,12 +120,12 @@ export class GoogleMapsService {
   /**
    * Record a request time for performance monitoring
    * Uses a sliding window to limit memory usage while providing meaningful metrics
-   * 
+   *
    * Design Decision: The moving average window size (default: 100) balances:
    * - Memory usage: Larger windows consume more memory
    * - Metric accuracy: Larger windows provide more stable averages
    * - Responsiveness: Smaller windows react faster to performance changes
-   * 
+   *
    * @param duration Request duration in milliseconds
    */
   private recordRequestTime(duration: number): void {
@@ -278,12 +280,13 @@ export class GoogleMapsService {
       }
 
       // Build API request parameters
+      // Note: Using 'any' for Google Maps API params due to complex union types
       const apiParams: any = {
         location: `${searchLocation.latitude},${searchLocation.longitude}`,
         radius,
         type: 'restaurant',
         keyword: searchQuery,
-        language: locale,
+        language: locale as any,
         key: this.apiKey,
       };
 
@@ -307,8 +310,9 @@ export class GoogleMapsService {
 
       // Pre-filter by distance using Google's location data before API calls
       // Filter first to avoid unnecessary object creation for out-of-range places
-      const placesWithDistance: Array<{ place: any; distance: number }> = [];
-      
+      // Note: Using 'any' for Google Places API data due to dynamic response structure
+  const placesWithDistance: Array<{ place: any; distance: number }> = [];
+
       for (const place of results) {
         if (!place.geometry?.location) continue;
 
@@ -328,7 +332,10 @@ export class GoogleMapsService {
       const preFilteredResults = placesWithDistance
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 15) // Reduced from 20 to 15 for better performance
-        .map(({ place, distance }) => ({ ...place, preliminaryDistance: distance }));
+        .map(({ place, distance }) => ({
+          ...place,
+          preliminaryDistance: distance,
+        }));
 
       // 🚀 PERFORMANCE OPTIMIZATION: Use controlled concurrency for API calls
       const restaurantPromises = preFilteredResults.map(place => async () => {
@@ -437,7 +444,7 @@ export class GoogleMapsService {
       const response = await this.client.geocode({
         params: {
           address: placeName,
-          language: locale,
+          language: locale as any, // Google Maps API accepts flexible locale strings
           key: this.apiKey,
         },
       });
@@ -577,7 +584,7 @@ export class GoogleMapsService {
       const response = await this.client.placeDetails({
         params: {
           place_id: placeId,
-          language: locale as any,
+          language: locale as any, // Google Maps API accepts flexible locale strings
           fields,
           key: this.apiKey,
         },
@@ -595,6 +602,7 @@ export class GoogleMapsService {
         return null;
       }
 
+      // Note: Using 'any' for Google Maps API response due to dynamic field selection
       const place = response.data.result as any;
 
       // Validate required fields

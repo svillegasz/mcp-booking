@@ -35,7 +35,7 @@ export const createMockLocation = (lat = 37.7749, lng = -122.4194) => ({
   longitude: lng,
 });
 
-export const createMockRestaurant = (overrides: any = {}) => ({
+export const createMockRestaurant = (overrides: Record<string, unknown> = {}) => ({
   placeId: 'test-place',
   name: 'Test Restaurant',
   address: '123 Test Street',
@@ -49,7 +49,7 @@ export const createMockRestaurant = (overrides: any = {}) => ({
 });
 
 // Performance monitoring helpers
-export const measureExecutionTime = async (fn: () => Promise<any>) => {
+export const measureExecutionTime = async (fn: () => Promise<unknown>) => {
   const startTime = Date.now();
   const result = await fn();
   const duration = Date.now() - startTime;
@@ -69,10 +69,10 @@ export const getMemoryUsage = () => {
 
 /**
  * Enable garbage collection for memory leak tests
- * 
+ *
  * The global.gc function is only available when Node.js is started with --expose-gc flag.
  * In testing environments, we provide a no-op fallback to avoid runtime errors.
- * 
+ *
  * Note: @types/node defines gc as NodeJS.GCFunction which can return Promise<void>,
  * but the actual implementation can be synchronous. We provide a compatible fallback.
  */

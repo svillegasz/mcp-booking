@@ -1,32 +1,32 @@
 #!/usr/bin/env node
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import express from "express";
-import { randomUUID } from "node:crypto";
-import { z } from "zod";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import dotenv from "dotenv";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import express from 'express';
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import dotenv from 'dotenv';
 
-import { GoogleMapsService } from "./services/googleMapsService.js";
-import { RestaurantRecommendationService } from "./services/restaurantRecommendationService.js";
-import { BookingService } from "./services/bookingService.js";
-import { RestaurantSearchParams, BookingRequest } from "./types/index.js";
+import { GoogleMapsService } from './services/googleMapsService.js';
+import { RestaurantRecommendationService } from './services/restaurantRecommendationService.js';
+import { BookingService } from './services/bookingService.js';
+import { RestaurantSearchParams, BookingRequest } from './types/index.js';
 
 // Load environment variables
 dotenv.config();
 
 // Default coordinates for Taiwan
 const DEFAULT_LATITUDE = parseFloat(
-  process.env.DEFAULT_LATITUDE || "24.1501164"
+  process.env.DEFAULT_LATITUDE || '24.1501164'
 );
 const DEFAULT_LONGITUDE = parseFloat(
-  process.env.DEFAULT_LONGITUDE || "120.6692299"
+  process.env.DEFAULT_LONGITUDE || '120.6692299'
 );
 const DEFAULT_SEARCH_RADIUS = parseInt(
-  process.env.DEFAULT_SEARCH_RADIUS || "3000"
+  process.env.DEFAULT_SEARCH_RADIUS || '3000'
 ); // 3km in meters
-const PORT = parseInt(process.env.PORT || "3000");
+const PORT = parseInt(process.env.PORT || '3000');
 
 class RestaurantBookingServer {
   private googleMapsService: GoogleMapsService;
@@ -37,7 +37,7 @@ class RestaurantBookingServer {
     // Initialize services
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      throw new Error("GOOGLE_MAPS_API_KEY environment variable is required");
+      throw new Error('GOOGLE_MAPS_API_KEY environment variable is required');
     }
 
     this.googleMapsService = new GoogleMapsService(apiKey);
@@ -47,8 +47,8 @@ class RestaurantBookingServer {
 
   private createServer(): McpServer {
     const server = new McpServer({
-      name: "restaurant-booking-server",
-      version: "1.0.0",
+      name: 'restaurant-booking-server',
+      version: '1.0.0',
     });
 
     this.setupTools(server);
@@ -58,8 +58,8 @@ class RestaurantBookingServer {
   private setupTools(server: McpServer) {
     // Search restaurants tool
     server.tool(
-      "search_restaurants",
-      "Search for restaurants based on location, cuisine, keyword, mood, event, radius, price level, and locale",
+      'search_restaurants',
+      'Search for restaurants based on location, cuisine, keyword, mood, event, radius, price level, and locale',
       {
         latitude: z
           .number()
@@ -112,7 +112,7 @@ class RestaurantBookingServer {
           .min(1)
           .max(4)
           .optional()
-          .describe("Price level preference (1=inexpensive, 4=very expensive)"),
+          .describe('Price level preference (1=inexpensive, 4=very expensive)'),
         locale: z
           .string()
           .optional()
@@ -120,28 +120,17 @@ class RestaurantBookingServer {
             'Locale for search results and Google API responses (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean, "th" for Thai). Affects restaurant names, reviews, and other text content.'
           ),
       },
-      async (args: {
-        latitude?: number;
-        longitude?: number;
-        placeName?: string;
-        cuisineTypes?: string[];
-        keyword?: string;
-        mood: string;
-        event: string;
-        radius?: number;
-        priceLevel?: number;
-        locale?: string;
-      }) => {
+      async (args: any) => {
         return await this.handleSearchRestaurants(args);
       }
     );
 
     // Get restaurant details tool
     server.tool(
-      "get_restaurant_details",
-      "Get details of a restaurant",
+      'get_restaurant_details',
+      'Get details of a restaurant',
       {
-        placeId: z.string().describe("Google Places ID of the restaurant"),
+        placeId: z.string().describe('Google Places ID of the restaurant'),
         locale: z
           .string()
           .optional()
@@ -149,17 +138,17 @@ class RestaurantBookingServer {
             'Locale for restaurant details (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean). Affects restaurant names, reviews, and other text content.'
           ),
       },
-      async (args: { placeId: string; locale?: string }) => {
+      async (args: any) => {
         return await this.handleGetRestaurantDetails(args);
       }
     );
 
     // Get booking instructions tool
     server.tool(
-      "get_booking_instructions",
-      "Get booking instructions for a restaurant",
+      'get_booking_instructions',
+      'Get booking instructions for a restaurant',
       {
-        placeId: z.string().describe("Google Places ID of the restaurant"),
+        placeId: z.string().describe('Google Places ID of the restaurant'),
         locale: z
           .string()
           .optional()
@@ -167,23 +156,23 @@ class RestaurantBookingServer {
             'Locale for booking instructions (e.g., "en", "zh-TW", "ja", "ko")'
           ),
       },
-      async (args: { placeId: string; locale?: string }) => {
+      async (args: any) => {
         return await this.handleGetBookingInstructions(args);
       }
     );
 
     // Check availability tool
     server.tool(
-      "check_availability",
-      "Check availability of a restaurant for a given date and time",
+      'check_availability',
+      'Check availability of a restaurant for a given date and time',
       {
-        placeId: z.string().describe("Google Places ID of the restaurant"),
+        placeId: z.string().describe('Google Places ID of the restaurant'),
         dateTime: z
           .string()
           .describe(
             'Preferred date and time in ISO format (e.g., "2024-01-15T19:00:00")'
           ),
-        partySize: z.number().describe("Number of people in the party"),
+        partySize: z.number().describe('Number of people in the party'),
         locale: z
           .string()
           .optional()
@@ -191,36 +180,31 @@ class RestaurantBookingServer {
             'Locale for availability check (e.g., "en", "zh-TW", "ja", "ko")'
           ),
       },
-      async (args: {
-        placeId: string;
-        dateTime: string;
-        partySize: number;
-        locale?: string;
-      }) => {
+      async (args: any) => {
         return await this.handleCheckAvailability(args);
       }
     );
 
     // Make reservation tool
     server.tool(
-      "make_reservation",
-      "Make a reservation for a restaurant",
+      'make_reservation',
+      'Make a reservation for a restaurant',
       {
-        placeId: z.string().describe("Google Places ID of the restaurant"),
-        partySize: z.number().describe("Number of people in the party"),
+        placeId: z.string().describe('Google Places ID of the restaurant'),
+        partySize: z.number().describe('Number of people in the party'),
         preferredDateTime: z
           .string()
-          .describe("Preferred date and time in ISO format"),
-        contactName: z.string().describe("Name for the reservation"),
-        contactPhone: z.string().describe("Phone number for the reservation"),
+          .describe('Preferred date and time in ISO format'),
+        contactName: z.string().describe('Name for the reservation'),
+        contactPhone: z.string().describe('Phone number for the reservation'),
         contactEmail: z
           .string()
           .optional()
-          .describe("Email address (optional)"),
+          .describe('Email address (optional)'),
         specialRequests: z
           .string()
           .optional()
-          .describe("Any special requests or dietary restrictions"),
+          .describe('Any special requests or dietary restrictions'),
         locale: z
           .string()
           .optional()
@@ -228,16 +212,7 @@ class RestaurantBookingServer {
             'Locale for reservation process (e.g., "en", "zh-TW", "ja", "ko")'
           ),
       },
-      async (args: {
-        placeId: string;
-        partySize: number;
-        preferredDateTime: string;
-        contactName: string;
-        contactPhone: string;
-        contactEmail?: string;
-        specialRequests?: string;
-        locale?: string;
-      }) => {
+      async (args: any) => {
         return await this.handleMakeReservation(args);
       }
     );
@@ -260,7 +235,7 @@ class RestaurantBookingServer {
       event: args.event,
       radius: args.radius || DEFAULT_SEARCH_RADIUS,
       priceLevel: args.priceLevel,
-      locale: args.locale || "en",
+      locale: args.locale || 'en',
     };
 
     // Search for restaurants
@@ -271,8 +246,8 @@ class RestaurantBookingServer {
       return {
         content: [
           {
-            type: "text" as const,
-            text: "No restaurants found matching your criteria. Try expanding your search radius or adjusting your preferences.",
+            type: 'text' as const,
+            text: 'No restaurants found matching your criteria. Try expanding your search radius or adjusting your preferences.',
           },
         ],
       };
@@ -311,7 +286,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: JSON.stringify(result, null, 2),
         },
       ],
@@ -321,15 +296,15 @@ class RestaurantBookingServer {
   private async handleGetRestaurantDetails(args: any) {
     const restaurant = await this.googleMapsService.getRestaurantDetails(
       args.placeId,
-      args.locale || "en"
+      args.locale || 'en'
     );
 
     if (!restaurant) {
       return {
         content: [
           {
-            type: "text" as const,
-            text: "Restaurant not found or unable to retrieve details.",
+            type: 'text' as const,
+            text: 'Restaurant not found or unable to retrieve details.',
           },
         ],
       };
@@ -338,7 +313,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: JSON.stringify(restaurant, null, 2),
         },
       ],
@@ -348,15 +323,15 @@ class RestaurantBookingServer {
   private async handleGetBookingInstructions(args: any) {
     const restaurant = await this.googleMapsService.getRestaurantDetails(
       args.placeId,
-      args.locale || "en"
+      args.locale || 'en'
     );
 
     if (!restaurant) {
       return {
         content: [
           {
-            type: "text" as const,
-            text: "Restaurant not found.",
+            type: 'text' as const,
+            text: 'Restaurant not found.',
           },
         ],
       };
@@ -368,7 +343,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: instructions,
         },
       ],
@@ -378,15 +353,15 @@ class RestaurantBookingServer {
   private async handleCheckAvailability(args: any) {
     const restaurant = await this.googleMapsService.getRestaurantDetails(
       args.placeId,
-      args.locale || "en"
+      args.locale || 'en'
     );
 
     if (!restaurant) {
       return {
         content: [
           {
-            type: "text" as const,
-            text: "Restaurant not found.",
+            type: 'text' as const,
+            text: 'Restaurant not found.',
           },
         ],
       };
@@ -401,7 +376,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: JSON.stringify(availability, null, 2),
         },
       ],
@@ -411,15 +386,15 @@ class RestaurantBookingServer {
   private async handleMakeReservation(args: any) {
     const restaurant = await this.googleMapsService.getRestaurantDetails(
       args.placeId,
-      args.locale || "en"
+      args.locale || 'en'
     );
 
     if (!restaurant) {
       return {
         content: [
           {
-            type: "text" as const,
-            text: "Restaurant not found.",
+            type: 'text' as const,
+            text: 'Restaurant not found.',
           },
         ],
       };
@@ -442,7 +417,7 @@ class RestaurantBookingServer {
     return {
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: JSON.stringify(result, null, 2),
         },
       ],
@@ -458,15 +433,15 @@ class RestaurantBookingServer {
       {};
 
     // Health check endpoint
-    app.get("/health", (req, res) => {
-      res.json({ status: "ok", service: "restaurant-booking-mcp-server" });
+    app.get('/health', (req, res) => {
+      res.json({ status: 'ok', service: 'restaurant-booking-mcp-server' });
     });
 
     // Handle POST requests for client-to-server communication
-    app.post("/mcp", async (req, res) => {
+    app.post('/mcp', async (req, res) => {
       try {
         // Check for existing session ID
-        const sessionId = req.headers["mcp-session-id"] as string | undefined;
+        const sessionId = req.headers['mcp-session-id'] as string | undefined;
         let transport: StreamableHTTPServerTransport;
         let server: McpServer;
 
@@ -498,10 +473,10 @@ class RestaurantBookingServer {
         } else {
           // Invalid request
           res.status(400).json({
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             error: {
               code: -32000,
-              message: "Bad Request: No valid session ID provided",
+              message: 'Bad Request: No valid session ID provided',
             },
             id: null,
           });
@@ -511,13 +486,13 @@ class RestaurantBookingServer {
         // Handle the request
         await transport.handleRequest(req, res, req.body);
       } catch (error) {
-        console.error("Error handling MCP request:", error);
+        console.error('Error handling MCP request:', error);
         if (!res.headersSent) {
           res.status(500).json({
-            jsonrpc: "2.0",
+            jsonrpc: '2.0',
             error: {
               code: -32603,
-              message: "Internal server error",
+              message: 'Internal server error',
             },
             id: null,
           });
@@ -530,9 +505,9 @@ class RestaurantBookingServer {
       req: express.Request,
       res: express.Response
     ) => {
-      const sessionId = req.headers["mcp-session-id"] as string | undefined;
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
       if (!sessionId || !transports[sessionId]) {
-        res.status(400).send("Invalid or missing session ID");
+        res.status(400).send('Invalid or missing session ID');
         return;
       }
 
@@ -541,13 +516,13 @@ class RestaurantBookingServer {
     };
 
     // Handle GET requests for server-to-client notifications via SSE
-    app.get("/mcp", handleSessionRequest);
+    app.get('/mcp', handleSessionRequest);
 
     // Handle DELETE requests for session termination
-    app.delete("/mcp", handleSessionRequest);
+    app.delete('/mcp', handleSessionRequest);
 
     // Start the server
-    app.listen(PORT, "0.0.0.0", () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(
         `Restaurant Booking MCP Server running on http://0.0.0.0:${PORT}`
       );
@@ -560,12 +535,12 @@ class RestaurantBookingServer {
 // Start the server
 const server = new RestaurantBookingServer();
 server.run().catch(error => {
-  console.error("Failed to start server:", error);
+  console.error('Failed to start server:', error);
   process.exit(1);
 });
 
 // Handle server shutdown
-process.on("SIGINT", async () => {
-  console.log("Shutting down server...");
+process.on('SIGINT', async () => {
+  console.log('Shutting down server...');
   process.exit(0);
 });

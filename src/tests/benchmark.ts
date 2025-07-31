@@ -9,9 +9,40 @@ import { GoogleMapsService } from '../services/googleMapsService.js';
 import { RestaurantRecommendationService } from '../services/restaurantRecommendationService.js';
 import { RestaurantSearchParams, Restaurant } from '../types/index.js';
 
+// Simple mock function implementation for standalone execution
+interface MockFunction {
+  (...args: any[]): any;
+  mock: {
+    calls: any[][];
+  };
+  mockClear: () => void;
+  mockImplementation: (fn: (...args: any[]) => any) => MockFunction;
+}
+
+const createMockFunction = (): MockFunction => {
+  const calls: any[][] = [];
+  let implementation: ((...args: any[]) => any) | null = null;
+
+  const mockFn = ((...args: any[]) => {
+    calls.push(args);
+    return implementation ? implementation(...args) : undefined;
+  }) as MockFunction;
+
+  mockFn.mock = { calls };
+  mockFn.mockClear = () => {
+    calls.length = 0;
+  };
+  mockFn.mockImplementation = (fn: (...args: any[]) => any) => {
+    implementation = fn;
+    return mockFn;
+  };
+
+  return mockFn;
+};
+
 // Mock the Google Maps client for consistent benchmarking
 const createMockClient = (responseDelay: number = 50) => ({
-  placesNearby: jest.fn().mockImplementation(
+  placesNearby: createMockFunction().mockImplementation(
     () =>
       new Promise(resolve =>
         setTimeout(
@@ -38,7 +69,7 @@ const createMockClient = (responseDelay: number = 50) => ({
         )
       )
   ),
-  placeDetails: jest.fn().mockImplementation(
+  placeDetails: createMockFunction().mockImplementation(
     ({ params }) =>
       new Promise(resolve =>
         setTimeout(

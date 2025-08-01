@@ -17,10 +17,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:performance": "jest --testPathPattern=performance",
     "test:integration": "jest --testPathPattern=integration",
-    "test:unit": "jest --testPathPattern='(googleMapsService|restaurantRecommendationService|bookingService).test'",
-    "benchmark": "npx tsx src/tests/benchmark.ts"
+    "test:unit": "jest --testPathPattern='(googleMapsService|restaurantRecommendationService|bookingService).test'"
   },
   "keywords": [
     "mcp",
@@ -33,6 +31,7 @@
   "license": "MIT",
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.2",
+    "@googlemaps/places": "^2.1.0",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "axios": "^1.6.0",
     "dotenv": "^17.2.1",

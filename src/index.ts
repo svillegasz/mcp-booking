@@ -10,8 +10,7 @@ import dotenv from 'dotenv';
 
 import { GoogleMapsService } from './services/googleMapsService.js';
 import { RestaurantRecommendationService } from './services/restaurantRecommendationService.js';
-import { BookingService } from './services/bookingService.js';
-import { RestaurantSearchParams, BookingRequest } from './types/index.js';
+import { RestaurantSearchParams } from './types/index.js';
 
 // Load environment variables
 dotenv.config();
@@ -31,7 +30,6 @@ const PORT = parseInt(process.env.PORT || '3000');
 class RestaurantBookingServer {
   private googleMapsService: GoogleMapsService;
   private recommendationService: RestaurantRecommendationService;
-  private bookingService: BookingService;
 
   constructor() {
     // Initialize services
@@ -42,7 +40,6 @@ class RestaurantBookingServer {
 
     this.googleMapsService = new GoogleMapsService(apiKey);
     this.recommendationService = new RestaurantRecommendationService();
-    this.bookingService = new BookingService();
   }
 
   private createServer(): McpServer {

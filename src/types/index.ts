@@ -13,6 +13,7 @@ export interface RestaurantSearchParams {
   priceLevel?: 1 | 2 | 3 | 4; // 1 = inexpensive, 4 = very expensive
   keyword?: string; // 🆕 NEW: Search for specific food types like "hotpot", "sushi", "pizza", etc.
   locale?: string; // 🆕 NEW: Locale for search results (e.g., "en", "zh-TW", "ja", "ko")
+  strictCuisineFiltering?: boolean; // 🆕 NEW: If true, exclude restaurants that don't match cuisine criteria
 }
 
 export interface Restaurant {

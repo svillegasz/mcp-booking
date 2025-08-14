@@ -13,8 +13,23 @@ export class RestaurantRecommendationService {
     restaurants: Restaurant[],
     params: RestaurantSearchParams
   ): Promise<RestaurantRecommendation[]> {
+    // Apply strict cuisine filtering if requested
+    let filteredRestaurants = restaurants;
+    if (params.strictCuisineFiltering && params.cuisineTypes.length > 0) {
+      filteredRestaurants = restaurants.filter(restaurant => 
+        this.calculateCuisineMatch(restaurant, params.cuisineTypes) > 0
+      );
+      
+      // If no restaurants match the strict criteria, fall back to all restaurants
+      // with a warning that no exact matches were found
+      if (filteredRestaurants.length === 0) {
+        console.warn('No restaurants found matching strict cuisine criteria, falling back to all results');
+        filteredRestaurants = restaurants;
+      }
+    }
+
     // Process all restaurants in parallel for better performance
-    const recommendationPromises = restaurants.map(async restaurant => {
+    const recommendationPromises = filteredRestaurants.map(async restaurant => {
       const [score, suitabilityForEvent, moodMatch] = await Promise.all([
         // These can run in parallel since they're independent calculations
         Promise.resolve(this.calculateRestaurantScore(restaurant, params)),

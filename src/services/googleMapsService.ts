@@ -61,7 +61,7 @@ export class GoogleMapsService {
         placeName,
         cuisineTypes,
         keyword,
-        radius = 500,
+        radius = 2000,
         locale = 'en',
       } = params;
 
@@ -99,7 +99,13 @@ export class GoogleMapsService {
       // Build request for Text Search API
       let request;
       let response;
-      if (location) {
+
+      // Use searchNearby only when we have coordinates AND no specific cuisine is requested
+      if (
+        location &&
+        (!cuisineTypes || cuisineTypes.length === 0) &&
+        !placeName
+      ) {
         request = {
           includedTypes: ['restaurant'],
           locationRestriction: {
@@ -111,7 +117,7 @@ export class GoogleMapsService {
               radius: radius,
             },
           },
-          maxResultCount: 5,
+          maxResultCount: 20,
           languageCode: locale,
         };
         console.info('request', request);
@@ -123,11 +129,34 @@ export class GoogleMapsService {
           },
         });
       } else {
-        request = {
-          textQuery,
-          maxResultCount: 5,
-          languageCode: locale,
-        };
+        // Use searchText for:
+        // 1. Place name searches (with or without cuisine)
+        // 2. Coordinate searches with specific cuisine
+        // 3. Keyword searches
+        if (location && !placeName) {
+          // Coordinate-based search with cuisine - add location bias
+          request = {
+            textQuery,
+            locationBias: {
+              circle: {
+                center: {
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                },
+                radius: radius,
+              },
+            },
+            maxResultCount: 20,
+            languageCode: locale,
+          };
+        } else {
+          // Place name search or no location provided
+          request = {
+            textQuery,
+            maxResultCount: 20,
+            languageCode: locale,
+          };
+        }
         console.info('request', request);
         response = await this.client.searchText(request, {
           otherArgs: {

@@ -121,6 +121,12 @@ class RestaurantBookingServer {
             .describe(
               'Locale for search results and Google API responses (e.g., "en" for English, "zh-TW" for Traditional Chinese, "ja" for Japanese, "ko" for Korean, "th" for Thai). Affects restaurant names, reviews, and other text content.'
             ),
+          strictCuisineFiltering: z
+            .boolean()
+            .optional()
+            .describe(
+              'If true, only restaurants that match the specified cuisine types will be returned. If false (default), all restaurants will be returned but cuisine matches will be scored higher.'
+            ),
         },
       },
       async args => {
@@ -147,6 +153,7 @@ class RestaurantBookingServer {
       radius: args.radius || DEFAULT_SEARCH_RADIUS,
       priceLevel: args.priceLevel,
       locale: args.locale || 'en',
+      strictCuisineFiltering: args.strictCuisineFiltering || false,
     };
 
     // Search for restaurants

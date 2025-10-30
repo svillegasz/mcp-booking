@@ -1,19 +1,31 @@
 #!/usr/bin/env node
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import express from 'express';
-import { randomUUID } from 'node:crypto';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
 
 import { GoogleMapsService } from './services/googleMapsService.js';
 import { RestaurantRecommendationService } from './services/restaurantRecommendationService.js';
 import { RestaurantSearchParams } from './types/index.js';
 
-// Load environment variables
-dotenv.config();
+// Ensure no warnings or debug info goes to stdout (only to stderr)
+// This is critical for stdio MCP transport - MUST be set up BEFORE dotenv.config()
+if (process.env.NODE_ENV !== 'test') {
+  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+  process.stdout.write = (chunk: any, encoding?: any, callback?: any): boolean => {
+    // Only allow JSON-RPC messages to stdout
+    const chunkStr = chunk.toString();
+    if (chunkStr.includes('"jsonrpc"') || chunkStr.includes('"method"') || chunkStr.includes('"result"')) {
+      return originalStdoutWrite(chunk, encoding, callback);
+    }
+    // Redirect everything else to stderr
+    return process.stderr.write(chunk, encoding, callback);
+  };
+}
+
+// Load environment variables (silent mode to avoid stdout pollution)
+dotenv.config({ debug: false });
 
 // Default coordinates for Taiwan
 const DEFAULT_LATITUDE = parseFloat(
@@ -25,7 +37,6 @@ const DEFAULT_LONGITUDE = parseFloat(
 const DEFAULT_SEARCH_RADIUS = parseInt(
   process.env.DEFAULT_SEARCH_RADIUS || '3000'
 ); // 3km in meters
-const PORT = parseInt(process.env.PORT || '3000');
 
 class RestaurantBookingServer {
   private googleMapsService: GoogleMapsService;
@@ -65,13 +76,13 @@ class RestaurantBookingServer {
             .number()
             .optional()
             .describe(
-              `Latitude of the search location (default: ${DEFAULT_LATITUDE} - Taiwan)`
+              `Latitude of the search location (default: ${DEFAULT_LATITUDE} - Medellin)`
             ),
           longitude: z
             .number()
             .optional()
             .describe(
-              `Longitude of the search location (default: ${DEFAULT_LONGITUDE} - Taiwan)`
+              `Longitude of the search location (default: ${DEFAULT_LONGITUDE} - Medellin)`
             ),
           placeName: z
             .string()
@@ -93,11 +104,13 @@ class RestaurantBookingServer {
             ),
           mood: z
             .string()
+            .optional()
             .describe(
               'Desired mood/atmosphere (e.g., "romantic", "casual", "upscale", "fun", "quiet")'
             ),
           event: z
             .string()
+            .optional()
             .describe(
               "Type of event or occasion (e.g., 'dating', 'gathering', 'business', 'casual', 'celebration')"
             ),
@@ -127,6 +140,12 @@ class RestaurantBookingServer {
             .describe(
               'If true, only restaurants that match the specified cuisine types will be returned. If false (default), all restaurants will be returned but cuisine matches will be scored higher.'
             ),
+          excludePlaceIds: z
+            .array(z.string())
+            .optional()
+            .describe(
+              'Array of Google Place IDs to exclude from results (e.g., restaurants already shown to the user). Use this to get additional recommendations.'
+            ),
         },
       },
       async args => {
@@ -154,6 +173,7 @@ class RestaurantBookingServer {
       priceLevel: args.priceLevel,
       locale: args.locale || 'en',
       strictCuisineFiltering: args.strictCuisineFiltering || false,
+      excludePlaceIds: args.excludePlaceIds || [],
     };
 
     // Search for restaurants
@@ -226,110 +246,16 @@ class RestaurantBookingServer {
   }
 
   async run() {
-    const app = express();
-    app.use(express.json());
+    // Create the server
+    const server = this.createServer();
 
-    // Map to store transports by session ID for stateful connections
-    const transports: { [sessionId: string]: StreamableHTTPServerTransport } =
-      {};
+    // Create stdio transport
+    const transport = new StdioServerTransport();
 
-    // Health check endpoint
-    app.get('/health', (req, res) => {
-      res.json({ status: 'ok', service: 'restaurant-booking-mcp-server' });
-    });
+    // Connect server to transport
+    await server.connect(transport);
 
-    // Handle POST requests for client-to-server communication
-    app.post('/mcp', async (req, res) => {
-      try {
-        // Check for existing session ID
-        const sessionId = req.headers['mcp-session-id'] as string | undefined;
-        let transport: StreamableHTTPServerTransport;
-        let server: McpServer;
-
-        if (sessionId && transports[sessionId]) {
-          // Reuse existing transport
-          transport = transports[sessionId];
-        } else if (!sessionId && isInitializeRequest(req.body)) {
-          // New initialization request
-          transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => randomUUID(),
-            onsessioninitialized: sessionId => {
-              // Store the transport by session ID
-              transports[sessionId] = transport;
-            },
-          });
-
-          // Clean up transport when closed
-          transport.onclose = () => {
-            if (transport.sessionId) {
-              delete transports[transport.sessionId];
-            }
-          };
-
-          // Create new server instance
-          server = this.createServer();
-
-          // Connect to the MCP server
-          await server.connect(transport);
-        } else {
-          // Invalid request
-          res.status(400).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32000,
-              message: 'Bad Request: No valid session ID provided',
-            },
-            id: null,
-          });
-          return;
-        }
-
-        // Handle the request
-        await transport.handleRequest(req, res, req.body);
-      } catch (error) {
-        console.error('Error handling MCP request:', error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32603,
-              message: 'Internal server error',
-            },
-            id: null,
-          });
-        }
-      }
-    });
-
-    // Reusable handler for GET and DELETE requests
-    const handleSessionRequest = async (
-      req: express.Request,
-      res: express.Response
-    ) => {
-      const sessionId = req.headers['mcp-session-id'] as string | undefined;
-      if (!sessionId || !transports[sessionId]) {
-        res.status(400).send('Invalid or missing session ID');
-        return;
-      }
-
-      const transport = transports[sessionId];
-      await transport.handleRequest(req, res);
-    };
-
-    // Handle GET requests for server-to-client notifications via SSE
-    app.get('/mcp', handleSessionRequest);
-
-    // Handle DELETE requests for session termination
-    app.delete('/mcp', handleSessionRequest);
-
-    // Start the server
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(
-        `Restaurant Booking MCP Server running on http://0.0.0.0:${PORT}`
-      );
-      console.log(`Health check available at http://0.0.0.0:${PORT}/health`);
-      console.log(`MCP endpoint available at http://0.0.0.0:${PORT}/mcp`);
-    });
+    console.error('Restaurant Booking MCP Server running on stdio');
   }
 }
 
@@ -342,6 +268,6 @@ server.run().catch(error => {
 
 // Handle server shutdown
 process.on('SIGINT', async () => {
-  console.log('Shutting down server...');
+  console.error('Shutting down server...');
   process.exit(0);
 });

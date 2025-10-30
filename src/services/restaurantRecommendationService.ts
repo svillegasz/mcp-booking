@@ -13,18 +13,33 @@ export class RestaurantRecommendationService {
     restaurants: Restaurant[],
     params: RestaurantSearchParams
   ): Promise<RestaurantRecommendation[]> {
-    // Apply strict cuisine filtering if requested
+    // Filter out excluded place IDs first
     let filteredRestaurants = restaurants;
+    if (params.excludePlaceIds && params.excludePlaceIds.length > 0) {
+      const excludeSet = new Set(params.excludePlaceIds);
+      filteredRestaurants = restaurants.filter(
+        restaurant => !excludeSet.has(restaurant.placeId)
+      );
+      
+      if (filteredRestaurants.length === 0) {
+        console.error('All restaurants have been excluded, returning empty results');
+        return [];
+      }
+    }
+    
+    // Apply strict cuisine filtering if requested
     if (params.strictCuisineFiltering && params.cuisineTypes.length > 0) {
-      filteredRestaurants = restaurants.filter(restaurant => 
+      filteredRestaurants = filteredRestaurants.filter(restaurant => 
         this.calculateCuisineMatch(restaurant, params.cuisineTypes) > 0
       );
       
       // If no restaurants match the strict criteria, fall back to all restaurants
       // with a warning that no exact matches were found
       if (filteredRestaurants.length === 0) {
-        console.warn('No restaurants found matching strict cuisine criteria, falling back to all results');
-        filteredRestaurants = restaurants;
+        console.error('No restaurants found matching strict cuisine criteria, falling back to all results');
+        filteredRestaurants = restaurants.filter(
+          restaurant => !params.excludePlaceIds || !params.excludePlaceIds.includes(restaurant.placeId)
+        );
       }
     }
 
@@ -58,8 +73,8 @@ export class RestaurantRecommendationService {
 
     const recommendations = await Promise.all(recommendationPromises);
 
-    // Sort by score (highest first) and return top 3
-    return recommendations.sort((a, b) => b.score - a.score).slice(0, 3);
+    // Sort by score (highest first) and return top 5
+    return recommendations.sort((a, b) => b.score - a.score).slice(0, 5);
   }
 
   /**
@@ -93,18 +108,22 @@ export class RestaurantRecommendationService {
     score += cuisineMatch * 20;
     factors++;
 
-    // Event suitability factor (10% weight)
-    const eventSuitability = this.calculateEventSuitability(
-      restaurant,
-      params.event
-    );
-    score += (eventSuitability / 10) * 10;
-    factors++;
+    // Event suitability factor (10% weight) - only if event is provided
+    if (params.event) {
+      const eventSuitability = this.calculateEventSuitability(
+        restaurant,
+        params.event
+      );
+      score += (eventSuitability / 10) * 10;
+      factors++;
+    }
 
-    // Mood match factor (10% weight)
-    const moodMatch = this.calculateMoodMatch(restaurant, params.mood);
-    score += (moodMatch / 10) * 10;
-    factors++;
+    // Mood match factor (10% weight) - only if mood is provided
+    if (params.mood) {
+      const moodMatch = this.calculateMoodMatch(restaurant, params.mood);
+      score += (moodMatch / 10) * 10;
+      factors++;
+    }
 
     return factors > 0 ? score : 0;
   }
@@ -144,8 +163,10 @@ export class RestaurantRecommendationService {
    */
   private calculateEventSuitability(
     restaurant: Restaurant,
-    event: string
+    event: string | undefined
   ): number {
+    if (!event) return 5; // Default neutral score if no event specified
+
     const eventFactors = {
       dating: {
         preferredPriceLevel: [2, 3, 4], // Mid to high-end
@@ -242,7 +263,9 @@ export class RestaurantRecommendationService {
   /**
    * Calculate mood match (1-10 scale)
    */
-  private calculateMoodMatch(restaurant: Restaurant, mood: string): number {
+  private calculateMoodMatch(restaurant: Restaurant, mood: string | undefined): number {
+    if (!mood) return 5; // Default neutral score if no mood specified
+
     const moodKeywords = {
       romantic: ['intimate', 'cozy', 'candlelit', 'wine', 'date', 'romantic'],
       casual: ['casual', 'relaxed', 'friendly', 'laid-back', 'comfortable'],
@@ -343,17 +366,21 @@ export class RestaurantRecommendationService {
     }
 
     // Event suitability
-    if (eventSuitability >= 8) {
-      reasons.push(`Perfect for ${params.event}`);
-    } else if (eventSuitability >= 6) {
-      reasons.push(`Well-suited for ${params.event}`);
+    if (params.event) {
+      if (eventSuitability >= 8) {
+        reasons.push(`Perfect for ${params.event}`);
+      } else if (eventSuitability >= 6) {
+        reasons.push(`Well-suited for ${params.event}`);
+      }
     }
 
     // Mood match
-    if (moodMatch >= 8) {
-      reasons.push(`Excellent match for ${params.mood} mood`);
-    } else if (moodMatch >= 6) {
-      reasons.push(`Good fit for ${params.mood} atmosphere`);
+    if (params.mood) {
+      if (moodMatch >= 8) {
+        reasons.push(`Excellent match for ${params.mood} mood`);
+      } else if (moodMatch >= 6) {
+        reasons.push(`Good fit for ${params.mood} atmosphere`);
+      }
     }
 
     // Price level

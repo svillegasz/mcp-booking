@@ -1,10 +1,14 @@
 {
-  "name": "mcp-restaurant-booking",
+  "name": "@svillegas/mcp-restaurant-booking",
   "version": "1.0.0",
   "description": "MCP server for restaurant booking with AI-powered recommendations",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "mcp-restaurant-booking": "dist/index.js"
+  },
   "scripts": {
+    "artifactregistry-login": "npx google-artifactregistry-auth",
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
@@ -35,7 +39,6 @@
     "@modelcontextprotocol/sdk": "^1.17.0",
     "axios": "^1.6.0",
     "dotenv": "^17.2.1",
-    "express": "^5.1.0",
     "form-data": "^4.0.4",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.24.1"
@@ -43,7 +46,6 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
-    "@types/express": "^5.0.3",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^8.38.0",

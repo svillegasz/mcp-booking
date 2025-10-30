@@ -7,13 +7,14 @@ export interface RestaurantSearchParams {
   location?: Location; // Made optional when placeName is provided
   placeName?: string; // 🆕 NEW: Alternative to location - place name to geocode
   cuisineTypes: string[];
-  mood: string;
-  event: string;
+  mood?: string; // Made optional - desired mood/atmosphere
+  event?: string; // Made optional - type of event or occasion
   radius?: number; // in meters, default 20km
   priceLevel?: 1 | 2 | 3 | 4; // 1 = inexpensive, 4 = very expensive
   keyword?: string; // 🆕 NEW: Search for specific food types like "hotpot", "sushi", "pizza", etc.
   locale?: string; // 🆕 NEW: Locale for search results (e.g., "en", "zh-TW", "ja", "ko")
   strictCuisineFiltering?: boolean; // 🆕 NEW: If true, exclude restaurants that don't match cuisine criteria
+  excludePlaceIds?: string[]; // 🆕 NEW: Place IDs to exclude from results (for getting additional recommendations)
 }
 
 export interface Restaurant {

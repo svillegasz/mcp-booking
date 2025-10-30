@@ -117,10 +117,11 @@ export class GoogleMapsService {
               radius: radius,
             },
           },
-          maxResultCount: 20,
+          maxResultCount: 30, // Get more results to ensure enough after excludePlaceIds filtering
           languageCode: locale,
         };
-        console.info('request', request);
+        // Debug logging (disabled for stdio mode)
+        // console.error('searchNearby request:', JSON.stringify(request));
         response = await this.client.searchNearby(request, {
           otherArgs: {
             headers: {
@@ -146,18 +147,19 @@ export class GoogleMapsService {
                 radius: radius,
               },
             },
-            maxResultCount: 20,
+            maxResultCount: 30,
             languageCode: locale,
           };
         } else {
           // Place name search or no location provided
           request = {
             textQuery,
-            maxResultCount: 20,
+            maxResultCount: 30,
             languageCode: locale,
           };
         }
-        console.info('request', request);
+        // Debug logging (disabled for stdio mode)
+        // console.error('searchText request:', JSON.stringify(request));
         response = await this.client.searchText(request, {
           otherArgs: {
             headers: {
